@@ -1,0 +1,9 @@
+class_name,function_name,branches,parameters,dependencies,side_effects,error_handling,mocking
+Product,getPrice,0,0,0,0,0,0
+Cart,addProduct,1,2,0,1,1,0
+Cart,calculateTotal,1,0,0,0,0,0
+DiscountCalculator,applyDiscount,3,2,0,0,1,0
+InventoryService,isAvailable,2,2,0,0,1,0
+InventoryService,reduceStock,2,2,0,1,1,0
+PaymentService,processPayment,3,1,0,1,1,0
+OrderService,placeOrder,3,3,3,2,2,2

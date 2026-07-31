@@ -1,0 +1,12 @@
+build/
+cmake-build-*/
+.vscode/
+.idea/
+*.user
+*.suo
+*.log
+*.gcda
+*.gcno
+*.gcov
+coverage/
+analysis/report.md
