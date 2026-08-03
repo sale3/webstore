@@ -52,10 +52,7 @@ bool Cart::isEmpty() const {
 }
 
 void Cart::clear() {
-    // TODO: Имплементирати пражњење корпе.
-    throw std::logic_error(
-        "Cart::clear is not implemented"
-    );
+    items_.clear();
 }
 
 const std::vector<Cart::CartItem>&
