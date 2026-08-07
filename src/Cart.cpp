@@ -7,20 +7,45 @@ void Cart::addProduct(
     const Product& product,
     int quantity
 ) {
+    //ИМПЛ
     if (quantity <= 0) {
         throw std::invalid_argument(
             "Quantity must be positive"
         );
     }
 
-    // TODO:
-    // Ако производ већ постоји, повећати његову количину.
-    // У супротном, додати нову ставку.
-    items_.push_back({product, quantity});
+    bool flag = false;
+    std::size_t i;
+    for (i = 0; i < items_.size(); i++)
+    {
+        if (items_[i].product.getId() == product.getId())
+        {
+            flag = true;
+        }
+
+        if (flag) break;
+    }
+
+    if (!flag)
+    {
+        items_.push_back({ product, quantity });
+    }
+    else {
+        items_[i].quantity += quantity;
+    }
 }
 
 bool Cart::removeProduct(int productId) {
-    // TODO: Имплементирати уклањање производа.
+    // ИМПЛ
+    auto it = std::find_if(items_.begin(), items_.end(), [&productId](const CartItem& item) {return item.product.getId() == productId;});
+
+    if (it != items_.end()) {
+        items_.erase(it);
+        return true;
+    }
+    else {
+        return false;
+    }
     static_cast<void>(productId);
     throw std::logic_error(
         "Cart::removeProduct is not implemented"
@@ -28,17 +53,26 @@ bool Cart::removeProduct(int productId) {
 }
 
 double Cart::calculateTotal() const {
-    // TODO: Имплементирати израчунавање укупне цијене.
-    throw std::logic_error(
-        "Cart::calculateTotal is not implemented"
-    );
+    // ИМПЛ
+    double result = 0;
+    for each(const CartItem & var in items_)
+    {
+        result += var.quantity * var.product.getPrice();
+    }
+
+    return result;
 }
 
 int Cart::getItemCount() const {
-    // TODO: Вратити укупан број појединачних артикала.
-    throw std::logic_error(
-        "Cart::getItemCount is not implemented"
-    );
+    // ИМПЛ: Вратити укупан број појединачних артикала.
+    
+    int result = 0;
+    for each(const CartItem & item in items_)
+    {
+        result += item.quantity;
+    }
+    return result;
+
 }
 
 std::size_t Cart::getDifferentProductCount() const {
@@ -51,6 +85,7 @@ bool Cart::isEmpty() const {
     return items_.empty();
 }
 
+//ИМПЛ
 void Cart::clear() {
     items_.clear();
 }

@@ -1,6 +1,7 @@
 #include "OrderService.h"
 
 #include <stdexcept>
+#include <string>
 
 OrderService::OrderService(
     IInventoryService& inventoryService,
@@ -20,7 +21,7 @@ OrderResult OrderService::placeOrder(
     int quantity,
     double amount
 ) {
-    // TODO:
+    // ИМПЛ:
     // 1. Провјерити productId.
     // 2. Провјерити quantity.
     // 3. Провјерити amount.
@@ -34,21 +35,47 @@ OrderResult OrderService::placeOrder(
     //
     // Послије неуспјешног корака наредни сервиси
     // не смију бити позвани.
+    if (productId <= 0) {
+        return OrderResult::InvalidProduct;
+    }
+    if (quantity <= 0) {
+        return OrderResult::InvalidQuantity;
+    }
+    if (amount <= 0) {
+        return OrderResult::InvalidAmount;
+    }
+    if (inventoryService_.isAvailable(productId, quantity) == false) {
+        return OrderResult::ProductUnavailable;
+    }
 
-    static_cast<void>(productId);
-    static_cast<void>(quantity);
-    static_cast<void>(amount);
+    OrderResult result;
+    bool paymentSuccessful = paymentService_.processPayment(amount);
 
-    throw std::logic_error(
-        "OrderService::placeOrder is not implemented"
-    );
+    if (paymentSuccessful) {
+        bool stockReduced = inventoryService_.reduceStock(productId, quantity);
+        if (stockReduced) {
+            int id = generateOrderId();
+            notificationService_.sendOrderConfirmation(id);
+            logger_.log("Order placed successfully. Order ID: " + std::to_string(id));
+            result = OrderResult::Success;
+        }
+        else {
+            result = OrderResult::StockUpdateFailed;
+        }
+    }
+    else {
+        result = OrderResult::PaymentFailed;
+    }
+
+    return result;
+
+
 }
 
 int OrderService::generateOrderId() {
-    // TODO:
+    // ИМПЛ:
     // Генерисати позитиван и јединствен идентификатор
     // у оквиру једне инстанце сервиса.
-    throw std::logic_error(
-        "Order ID generation is not implemented"
-    );
+    return nextOrderId_++;
+
 }

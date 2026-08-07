@@ -15,7 +15,7 @@ PaymentService::PaymentService(double transactionLimit)
 }
 
 bool PaymentService::processPayment(double amount) {
-    // TODO:
+    // ИМПЛ:
     // Плаћање прихватити само ако је:
     // - amount > 0,
     // - сервис доступан,
@@ -23,11 +23,16 @@ bool PaymentService::processPayment(double amount) {
     //
     // Код успјеха ажурирати lastProcessedAmount_
     // и processedPaymentCount_.
-    static_cast<void>(amount);
 
-    throw std::logic_error(
-        "PaymentService::processPayment is not implemented"
-    );
+    if (amount <= 0) return false;
+    if (amount > transactionLimit_) return false;
+    if (!isServiceAvailable()) return false;
+
+    lastProcessedAmount_ = amount;
+    processedPaymentCount_++;
+
+    return true;
+ 
 }
 
 void PaymentService::setServiceAvailable(bool available) {
