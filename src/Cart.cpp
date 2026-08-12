@@ -14,42 +14,29 @@ void Cart::addProduct(
         );
     }
 
-    bool flag = false;
-    std::size_t i;
-    for (i = 0; i < items_.size(); i++)
-    {
-        if (items_[i].product.getId() == product.getId())
-        {
-            flag = true;
-        }
+    auto it = std::find_if(items_.begin(), items_.end(), [&](const auto& item) {
+        return item.product.getId() == product.getId();
+        });
 
-        if (flag) break;
-    }
-
-    if (!flag)
-    {
-        items_.push_back({ product, quantity });
+    if (it != items_.end()) {
+        it->quantity += quantity;
     }
     else {
-        items_[i].quantity += quantity;
+        items_.push_back({ product, quantity });
     }
 }
 
 bool Cart::removeProduct(int productId) {
-    // ИМПЛ
-    auto it = std::find_if(items_.begin(), items_.end(), [&productId](const CartItem& item) {return item.product.getId() == productId;});
+    auto it = std::find_if(items_.begin(), items_.end(), [productId](const CartItem& item) {
+        return item.product.getId() == productId;
+    });
 
     if (it != items_.end()) {
         items_.erase(it);
         return true;
     }
-    else {
-        return false;
-    }
-    static_cast<void>(productId);
-    throw std::logic_error(
-        "Cart::removeProduct is not implemented"
-    );
+
+    return false;
 }
 
 double Cart::calculateTotal() const {

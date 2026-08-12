@@ -2,6 +2,7 @@
 
 #include <stdexcept>
 #include <string>
+#include <chrono>
 
 OrderService::OrderService(
     IInventoryService& inventoryService,
@@ -76,6 +77,19 @@ int OrderService::generateOrderId() {
     // ИМПЛ:
     // Генерисати позитиван и јединствен идентификатор
     // у оквиру једне инстанце сервиса.
-    return nextOrderId_++;
+    
+     using namespace std::chrono;
+
+     auto now = system_clock::now();
+     //вријеме протекло од 1.1.1970.
+     auto millis_since_epoch = duration_cast<milliseconds>(
+         now.time_since_epoch()
+     ).count();
+
+     // узимамо остатак при дијељењу како би стало у инт
+     int time_base = static_cast<int>(millis_since_epoch % 1000000);
+
+     return time_base + (nextOrderId_++);
+    
 
 }

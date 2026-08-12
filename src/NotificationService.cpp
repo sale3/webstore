@@ -11,7 +11,7 @@ void NotificationService::sendOrderConfirmation(
     // Одбити неисправан идентификатор и евидентирати
     // идентификатор успјешно послате потврде.
 
-    if(orderId<=0)
+    if(orderId <= 0)
     {
         throw std::invalid_argument("OrderId must be positive number.");
     }
@@ -27,11 +27,13 @@ bool NotificationService::wasConfirmationSent(
     int orderId
 ) const {
     // ИМПЛ: Провјерити да ли је потврда послата.
-    return std::find(
+    bool was_sent = std::find(
         confirmedOrderIds_.begin(),
         confirmedOrderIds_.end(),
         orderId
     ) != confirmedOrderIds_.end();
+
+    return was_sent;
 
 }
 

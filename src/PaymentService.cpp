@@ -24,9 +24,7 @@ bool PaymentService::processPayment(double amount) {
     // Код успјеха ажурирати lastProcessedAmount_
     // и processedPaymentCount_.
 
-    if (amount <= 0) return false;
-    if (amount > transactionLimit_) return false;
-    if (!isServiceAvailable()) return false;
+    if (amount <= 0 || amount > transactionLimit_ || !isServiceAvailable()) return false;
 
     lastProcessedAmount_ = amount;
     processedPaymentCount_++;
