@@ -1,0 +1,60 @@
+name: C++ CI & Coverage
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  pull_request:
+
+jobs:
+  build-test-coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            gcovr \
+            libgtest-dev\
+            libgmock-dev
+
+      - name: Build GTest/GMock from source
+        run: |
+          cd /usr/src/googletest
+          sudo cmake .
+          sudo cmake --build . --target install
+
+      - name: Build project
+        run: |
+          cmake --build build
+
+      - name: Run tests
+        run: |
+          ctest --test-dir build --output-on-failure
+
+      - name: Generate coverage reports
+        run: |
+          gcovr \
+            --root . \
+            --exclude tests \
+            --exclude include \
+            --html-details coverage.html \
+            --json coverage.json \
+            --print-summary
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage.html
+            coverage.json
+          retention-days: 14
