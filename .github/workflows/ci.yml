@@ -1,5 +1,4 @@
 name: C++ CI & Coverage
-
 on:
   push:
     branches:
@@ -7,15 +6,12 @@ on:
       - master
       - develop
   pull_request:
-
 jobs:
   build-test-coverage:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
-
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -23,23 +19,25 @@ jobs:
             build-essential \
             cmake \
             gcovr \
-            libgtest-dev\
+            libgtest-dev \
             libgmock-dev
-
       - name: Build GTest/GMock from source
         run: |
           cd /usr/src/googletest
           sudo cmake .
           sudo cmake --build . --target install
-
+      - name: Configure project
+        run: |
+          cmake -S . -B build \
+            -DBUILD_TESTS=ON \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS="--coverage"
       - name: Build project
         run: |
           cmake --build build
-
       - name: Run tests
         run: |
           ctest --test-dir build --output-on-failure
-
       - name: Generate coverage reports
         run: |
           gcovr \
@@ -49,7 +47,6 @@ jobs:
             --html-details coverage.html \
             --json coverage.json \
             --print-summary
-
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
         with:
