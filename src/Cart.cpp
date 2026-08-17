@@ -42,9 +42,8 @@ bool Cart::removeProduct(int productId) {
 double Cart::calculateTotal() const {
     // ИМПЛ
     double result = 0;
-    for each(const CartItem & var in items_)
-    {
-        result += var.quantity * var.product.getPrice();
+    for (const CartItem& item : items_) {
+        result += item.quantity * item.product.getPrice();
     }
 
     return result;
@@ -54,8 +53,7 @@ int Cart::getItemCount() const {
     // ИМПЛ: Вратити укупан број појединачних артикала.
     
     int result = 0;
-    for each(const CartItem & item in items_)
-    {
+    for (const CartItem& item : items_) {
         result += item.quantity;
     }
     return result;
