@@ -1,18 +1,22 @@
 #include "NotificationService.h"
 
 #include <stdexcept>
+#include <algorithm>
+
 
 void NotificationService::sendOrderConfirmation(
     int orderId
 ) {
-    // TODO:
+    // ИМПЛ:
     // Одбити неисправан идентификатор и евидентирати
     // идентификатор успјешно послате потврде.
-    static_cast<void>(orderId);
 
-    throw std::logic_error(
-        "NotificationService is not implemented"
-    );
+    if(orderId <= 0)
+    {
+        throw std::invalid_argument("OrderId must be positive number.");
+    }
+
+    confirmedOrderIds_.push_back(orderId);
 }
 
 int NotificationService::getNotificationCount() const {
@@ -22,12 +26,15 @@ int NotificationService::getNotificationCount() const {
 bool NotificationService::wasConfirmationSent(
     int orderId
 ) const {
-    // TODO: Провјерити да ли је потврда послата.
-    static_cast<void>(orderId);
+    // ИМПЛ: Провјерити да ли је потврда послата.
+    bool was_sent = std::find(
+        confirmedOrderIds_.begin(),
+        confirmedOrderIds_.end(),
+        orderId
+    ) != confirmedOrderIds_.end();
 
-    throw std::logic_error(
-        "Notification lookup is not implemented"
-    );
+    return was_sent;
+
 }
 
 const std::vector<int>&

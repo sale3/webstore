@@ -1,55 +1,65 @@
 #include "InventoryService.h"
 
+
+#include <algorithm>
 #include <stdexcept>
 
 void InventoryService::setStock(
     int productId,
     int quantity
 ) {
-    // TODO:
+    // ИМПЛ:
     // Провјерити идентификатор и количину,
     // а затим поставити стање.
     static_cast<void>(productId);
     static_cast<void>(quantity);
+    if (productId <= 0) {
+        throw std::invalid_argument("Product id must be positive");
+    }
+    if (quantity < 0) {
+        throw std::invalid_argument("Quantity cannot be negative");
+    }
 
-    throw std::logic_error(
-        "InventoryService::setStock is not implemented"
-    );
+    stock_[productId] = quantity;
 }
 
 int InventoryService::getStock(int productId) const {
-    // TODO:
+    // ИМПЛ:
     // За непостојећи производ вратити 0.
-    static_cast<void>(productId);
+    auto it = stock_.find(productId);
 
-    throw std::logic_error(
-        "InventoryService::getStock is not implemented"
-    );
+    if (it != stock_.end())
+    {
+        return it->second;
+    }
+    else
+        return 0;
+   
 }
 
 bool InventoryService::isAvailable(
     int productId,
     int quantity
 ) const {
-    // TODO: Провјерити постојање и довољну количину.
-    static_cast<void>(productId);
-    static_cast<void>(quantity);
+    // ИМПЛ: Провјерити постојање и довољну количину.
+   
+    auto it = stock_.find(productId);
 
-    throw std::logic_error(
-        "InventoryService::isAvailable is not implemented"
-    );
+    if (it == stock_.end())
+        return false;
+    else 
+        return it->second >= quantity;
 }
 
 bool InventoryService::reduceStock(
     int productId,
     int quantity
 ) {
-    // TODO:
+    // ИМПЛ:
     // Смањити стање само ако је количина доступна.
-    static_cast<void>(productId);
-    static_cast<void>(quantity);
-
-    throw std::logic_error(
-        "InventoryService::reduceStock is not implemented"
-    );
+    if (!isAvailable(productId, quantity))
+        return false;
+    
+    stock_[productId] -= quantity;
+    return true;
 }

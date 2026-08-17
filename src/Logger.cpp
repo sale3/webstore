@@ -1,14 +1,11 @@
 #include "Logger.h"
 
 #include <stdexcept>
+#include <algorithm>
 
 void Logger::log(const std::string& message) {
-    // TODO: Додати поруку у интерну колекцију.
-    static_cast<void>(message);
-
-    throw std::logic_error(
-        "Logger::log is not implemented"
-    );
+    // ИМПЛ: Додати поруку у интерну колекцију.
+	messages_.push_back(message);
 }
 
 int Logger::getMessageCount() const {
@@ -18,12 +15,12 @@ int Logger::getMessageCount() const {
 bool Logger::contains(
     const std::string& message
 ) const {
-    // TODO: Провјерити постојање поруке.
-    static_cast<void>(message);
-
-    throw std::logic_error(
-        "Logger::contains is not implemented"
-    );
+    // ИМПЛ: Провјерити постојање поруке.
+	auto it = std::find_if(messages_.begin(), messages_.end(),
+		[&message](const std::string& msg) {
+			return msg == message;
+		});
+	return it != messages_.end();
 }
 
 const std::vector<std::string>&
