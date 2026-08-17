@@ -51,13 +51,12 @@ double Cart::calculateTotal() const {
 
 int Cart::getItemCount() const {
     // ИМПЛ: Вратити укупан број појединачних артикала.
-    
+
     int result = 0;
     for (const CartItem& item : items_) {
         result += item.quantity;
     }
     return result;
-
 }
 
 std::size_t Cart::getDifferentProductCount() const {
