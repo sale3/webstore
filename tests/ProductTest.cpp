@@ -2,80 +2,56 @@
 
 #include <gtest/gtest.h>
 
-TEST(ProductTest, ThrowsOnNegativeId) {
-    //Arrange
-    const int invalidId = -1;
-    const std::string name = "Test product";
-    const double price = 25.50;
+#include <string>
+#include <tuple>
 
-    //Act & Assert
-    EXPECT_THROW(
-        Product(invalidId, name, price),
-        std::invalid_argument
-    );
-}
+class ProductTest : public ::testing::Test {
+    protected:
+};
 
-TEST(ProductTest, ThrowsOnZeroId) {
-    //Arrange
-    const int invalidId = 0;
-    const std::string name = "Test product";
-    const double price = 25.50;
 
-    //Act & Assert
-    EXPECT_THROW(
-        Product(invalidId, name, price),
-        std::invalid_argument
-    );
-}
+//invalid argument tests
+class ProductInvalidArgumentTest
+    : public ProductTest,                                    
+      public ::testing::WithParamInterface<std::tuple<int, std::string, double>> {
+};
 
-TEST(ProductTest, ThrowsOnEmptyName) {
-    //Arrange
-    const int id = 1;
-    const std::string emptyName = "";
-    const double price = 25.50;
+TEST_P(ProductInvalidArgumentTest, InvalidValuesExpectFail) {
+    const auto& [id, name, price] = GetParam();
+    EXPECT_THROW(Product(id, name, price), std::invalid_argument);
+};
 
-    //Act & Assert
-    EXPECT_THROW(
-        Product(id, emptyName, price),
-        std::invalid_argument
-    );
-}
+INSTANTIATE_TEST_SUITE_P(
+    InvalidConstructorArguments,          
+    ProductInvalidArgumentTest,          
+    ::testing::Values(                    
+        std::make_tuple(-1, "Test product", 25.50), //ThrowsOnNegativeId
+        std::make_tuple(0, "Test product", 25.50),  //ThrowsOnZeroId
+        std::make_tuple(1, "", 25.50),              //ThrowsOnEmptyName
+        std::make_tuple(1, "Test product", -5.0)   //ThrowsOnNegativePrice
+    )
+);
 
-TEST(ProductTest, ThrowsOnNegativePrice) {
-    //Arrange
-    const int id = 1;
-    const std::string name = "Test product";
-    const double invalidPrice = -5.0;
+//valid argument tests
 
-    //Act & Assert
-    EXPECT_THROW(
-        Product(id, name, invalidPrice),
-        std::invalid_argument
-    );
-}
+class ProductValidArgumentTest
+    : public ProductTest,                                    
+      public ::testing::WithParamInterface<std::tuple<int, std::string, double>> {
+};  
 
-TEST(ProductTest, AllowsZeroPrice) {
-    //Arrange
-    const int id = 1;
-    const std::string name = "Free sample";
-    const double zeroPrice = 0.0;
+TEST_P(ProductValidArgumentTest, ValidValuesExpectSuccess) {
+    const auto& [id, name, price] = GetParam();
 
-    //Act
-    const Product product(id, name, zeroPrice);
-
-    //Assert
-    EXPECT_DOUBLE_EQ(product.getPrice(), 0.0);
-}
-
-TEST(ProductTest, AllowsPositiveId) {
-    //Arrange
-    const int id = 1;
-    const std::string name = "Boundary product";
-    const double price = 10.0;
-
-    //Act
     const Product product(id, name, price);
 
-    //Assert 
-    EXPECT_EQ(product.getId(), 1);
+    EXPECT_EQ(product.getId(), id);
+    EXPECT_EQ(product.getName(), name);
+    EXPECT_DOUBLE_EQ(product.getPrice(), price);
 }
+
+INSTANTIATE_TEST_SUITE_P(ValidConstructorArguments, ProductValidArgumentTest, ::testing::Values(
+    std::make_tuple(1, "Test product", 25.50),  //AllowsPositiveId
+    std::make_tuple(2, "Free item", 0.0),       //AllowsZeroPrice ???
+    std::make_tuple(999, "Test product", 100.0), //AllowsLargeId
+    std::make_tuple(3, "Test product", 9999.99)  //AllowsLargePrice
+));
