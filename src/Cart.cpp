@@ -42,8 +42,8 @@ bool Cart::removeProduct(int productId) {
 double Cart::calculateTotal() const {
     // ИМПЛ
     double result = 0;
-    for (const CartItem& var : items_) {
-        result += var.quantity * var.product.getPrice();
+    for (const CartItem& item : items_) {
+        result += item.quantity * item.product.getPrice();
     }
 
     return result;
