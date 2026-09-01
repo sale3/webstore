@@ -57,6 +57,9 @@ bool InventoryService::reduceStock(
 ) {
     // ИМПЛ:
     // Смањити стање само ако је количина доступна.
+    if(quantity<=0){
+        throw std::invalid_argument("Quantity must be positive");
+    }
     if (!isAvailable(productId, quantity))
         return false;
     
