@@ -43,8 +43,9 @@ jobs:
         run: |
           gcovr \
             --root . \
-            --exclude tests \
-            --exclude include \
+            --filter src/ \
+            --exclude src/main.cpp \
+            --exclude-throw-branches \
             --html-details coverage.html \
             --json coverage.json \
             --print-summary
