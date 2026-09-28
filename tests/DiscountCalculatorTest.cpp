@@ -107,3 +107,14 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_tuple(200.0, CustomerType::Gold, 180.0),
         std::make_tuple(1200.0, CustomerType::Silver, 1080.0))
 );
+
+TEST_F(DiscountCalculatorTest, ThrowsOnInvalidCustomerType) {
+    // Arrange
+    const auto invalidType = static_cast<CustomerType>(99);
+
+    // Act & Assert
+    EXPECT_THROW(
+        calculator_.calculateDiscountPercentage(200.0, invalidType),
+        std::invalid_argument
+    );
+}
