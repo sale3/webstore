@@ -61,7 +61,7 @@ TEST_F(LoggerTest, ContainsReturnsFalseWhenEmpty)
 }
 
 class LoggerContainsTest : public LoggerTest,
-                           public ::testing::WithParamInterface<std::tuple<std::string, std::string>>
+                           public ::testing::WithParamInterface<std::tuple<std::string, bool>>
 {
 protected:
     void SetUp() override
