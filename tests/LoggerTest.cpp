@@ -2,60 +2,90 @@
 
 #include <gtest/gtest.h>
 #include <string>
+#include <tuple>
 
-
-class LoggerTest: public ::testing::Test {
-    protected:
+class LoggerTest : public ::testing::Test
+{
+protected:
     Logger logger_{};
 };
 
-TEST_F(LoggerTest, NewLoggerHasNoMessages) {
+TEST_F(LoggerTest, NewLoggerHasNoMessages)
+{
+    // Assert
     EXPECT_EQ(logger_.getMessageCount(), 0);
     EXPECT_TRUE(logger_.getMessages().empty());
 }
 
-TEST_F(LoggerTest, LogAddsMessageInOrder) {
+TEST_F(LoggerTest, LogIncreasesMessageCount)
+{
+    // Act
     logger_.log("First message");
-    EXPECT_EQ(logger_.getMessageCount(), 1);
     logger_.log("Second message");
+
+    // Assert
     EXPECT_EQ(logger_.getMessageCount(), 2);
-
-    EXPECT_EQ(logger_.getMessages()[0], "First message");
-    EXPECT_EQ(logger_.getMessages()[1], "Second message");
-
 }
 
-class LoggerContainsReturnsTest : public LoggerTest, public ::testing::WithParamInterface<std::tuple<bool,std::string>>{
-    protected:
-    Logger logger_;
-    
-    void SetUp() override{
-        logger_.log("Order placed successfully");
-    }
-};
-
-
-TEST_P(LoggerContainsReturnsTest, CorrectReturnTest ){
-    //Arrange
-    const auto[isCorrect, message] = GetParam();
-    //Act & Assertt
-    EXPECT_EQ(isCorrect, logger_.contains(message));
-}
-
-INSTANTIATE_TEST_SUITE_P(ContainsReturnsValues, LoggerContainsReturnsTest, ::testing::Values(
-    std::make_tuple(true, "Order placed successfully"),
-    std::make_tuple(false, "Anything else")
-));
-
-TEST_F(LoggerTest, ContainsReturnsFalseWhenEmpty) {
-    EXPECT_FALSE(logger_.contains("Anything"));
-}
-
-TEST_F(LoggerTest, GetMessagesReturnsAllLoggedMessages) {
+TEST_F(LoggerTest, GetMessagesReturnsMessagesInLoggedOrder)
+{
+    // Arrange
     logger_.log("A");
     logger_.log("B");
     logger_.log("C");
 
-    const auto& messages = logger_.getMessages();
-    EXPECT_EQ(messages.size(), 3u);
+    // Act
+    const auto &messages = logger_.getMessages();
+
+    // Assert
+    ASSERT_EQ(messages.size(), 3u);
+    EXPECT_EQ(messages[0], "A");
+    EXPECT_EQ(messages[1], "B");
+    EXPECT_EQ(messages[2], "C");
 }
+
+TEST_F(LoggerTest, LogKeepsDuplicateMessages)
+{
+    // Act
+    logger_.log("SameMessage");
+    logger_.log("SameMessage");
+
+    // Assert
+    EXPECT_EQ(logger_.getMessageCount(), 2);
+}
+
+TEST_F(LoggerTest, ContainsReturnsFalseWhenEmpty)
+{
+    // Act & Assert
+    EXPECT_FALSE(logger_.contains("Anything"));
+}
+
+class LoggerContainsTest : public LoggerTest,
+                           public ::testing::WithParamInterface<std::tuple<std::string, std::string>>
+{
+protected:
+    void SetUp() override
+    {
+        logger_.log("Order placed successfully");
+    }
+};
+
+TEST_P(LoggerContainsTest, CorrectReturnTest)
+{
+    // Arrange
+    const auto &[message, expected] = GetParam();
+
+    // Act
+    const bool result = logger_.contains(message);
+
+    // Assert
+    EXPECT_EQ(result, expected);
+}
+
+INSTANTIATE_TEST_SUITE_P(ContainsReturnsValues, LoggerContainsTest,
+                         ::testing::Values(
+                             std::make_tuple("Order placed successfully", true),
+                             std::make_tuple("Anything else", false),
+                             std::make_tuple("Order placed", false),
+                             std::make_tuple("order placed successfully", false),
+                             std::make_tuple("", false)));
