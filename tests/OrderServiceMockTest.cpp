@@ -12,6 +12,7 @@ using ::testing::HasSubstr;
 using ::testing::InSequence;
 using ::testing::Return;
 using ::testing::StrictMock;
+using ::testing::DoubleEq;
 
 class OrderServiceMockTest : public ::testing::Test
 {
@@ -35,11 +36,10 @@ TEST_F(OrderServiceMockTest, SuccessfulOrderCallsDependenciesInOrder)
     // Arrange
     InSequence sequence;
     EXPECT_CALL(inventory_, isAvailable(kProductId, kQuantity)).WillOnce(Return(true)); //prvi put vrati true
-    EXPECT_CALL(payment_, processPayment(kAmount)).WillOnce(Return(true));
+    EXPECT_CALL(payment_, processPayment(DoubleEq(kAmount))).WillOnce(Return(true));
     EXPECT_CALL(inventory_, reduceStock(kAmount, kQuantity)).WillOnce(Return(true));
     EXPECT_CALL(notification_, sendOrderConfirmation(kFirstOrderId));
     EXPECT_CALL(logger_, log(HasSubstr(std::to_string(kFirstOrderId))));
-
     // Act
     const OrderResult result = orderService_.placeOrder(kProductId, kQuantity, kAmount);
 
@@ -107,7 +107,7 @@ TEST_F(OrderServiceMockTest, UnavailableProductStopsBeforePayment){
     const OrderResult results = orderService_.placeOrder(kProductId, kQuantity, kAmount);
 
     //Assert
-    EXPECT_EQ(results, OrderResult::InvalidProduct);
+    EXPECT_EQ(results, OrderResult::ProductUnavailable);
 }
 
 TEST_F(OrderServiceMockTest, FailedPaymentStopsBeforeReducingStock){
