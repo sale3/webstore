@@ -1,0 +1,13 @@
+# Планиране мутације/Ручно писане мутације
+#
+# Покретање:
+#   .\build\debug\mutation_tester.exe --plan analysis/mutation/planned_mutations.txt
+
+
+# ---------- NotificationService ----------
+
+[M01] Potvrda sa ID-jem narudžbe 0 ne smije biti poslata
+file:     src/NotificationService.cpp
+original: orderId <= 0
+mutant:   orderId < 0
+expected: killed
