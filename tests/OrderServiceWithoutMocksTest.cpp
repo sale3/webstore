@@ -49,6 +49,14 @@ TEST_F(OrderServiceWithoutMocksTest, SuccessfulOrderReturnsSuccess){
     EXPECT_EQ(result, OrderResult::Success); 
 }
 
+TEST_F(OrderServiceWithoutMocksTest, SmallPositiveAmountIsAccepted) {
+    // Act
+    const OrderResult result = orderService_.placeOrder(kProductId, 1, 0.5);
+
+    // Assert
+    EXPECT_EQ(result, OrderResult::Success);
+}
+
 TEST_F(OrderServiceWithoutMocksTest, SuccessfulOrderReducesStock) {
     // Act
     orderService_.placeOrder(kProductId, 3, kValidAmount);
@@ -184,6 +192,7 @@ TEST_F(OrderServiceWithoutMocksTest, UnavailablePaymentServiceStopsFurtherSteps)
     paymentService_.setServiceAvailable(false);
 
     // Act
+
     const OrderResult result = orderService_.placeOrder(kProductId, 3, kValidAmount);
 
     // Assert
@@ -193,3 +202,4 @@ TEST_F(OrderServiceWithoutMocksTest, UnavailablePaymentServiceStopsFurtherSteps)
 /*StockUpdateFailed нисам тестирала овдје јер увијек прође ако је
  isAvailable прошао па ћу је тестирати у OrderServiceMockTest, гдје ће ми IInventoryService::reduceStock враћати false иако
  је isAvailable вратио true */
+
