@@ -19,7 +19,7 @@ TEST_P(PaymentServiceConstructorTest, ThrowsOnNonPositiveTransactionLimit) {
     const double invalidLimit = GetParam();
     //Act & Assert
     EXPECT_THROW(
-        PaymentService(invalidLimit),
+        PaymentService{invalidLimit},
         std::invalid_argument
     );
 }
@@ -29,6 +29,12 @@ INSTANTIATE_TEST_SUITE_P(
     PaymentServiceConstructorTest,
     ::testing::Values(0.0, -1.0, -100.0)
 );
+
+// Сваки позитиван лимит је исправан (и они мањи од 1)
+TEST(PaymentServiceConstructorTest, AcceptsSmallPositiveTransactionLimit) {
+    //Act & Assert
+    EXPECT_NO_THROW(PaymentService{0.5});
+}
 
 class PaymentServiceProcessPaymentTest : public PaymentServiceTest, public ::testing::WithParamInterface<std::tuple<double, bool, bool>> {
     protected:
@@ -52,11 +58,12 @@ INSTANTIATE_TEST_SUITE_P(
     PaymentServiceProcessPaymentTest,
     ::testing::Values(
         std::make_tuple(0.0, true, false),       //  == 0 
+        std::make_tuple(0.5, true, true),        // мали позитиван износ
         std::make_tuple(-50.0, true, false),     // <0 
         std::make_tuple(1500.0, true, false),    // >1000
         std::make_tuple(1000.0, true, true),     // == 1000
-        std::make_tuple(500.0, false, false),    // nedostupan service
-        std::make_tuple(500.0, true, true)       // valid 
+        std::make_tuple(500.0, false, false),    // недоступан сервис
+        std::make_tuple(500.0, true, true)       // валидно 
     )
 );
 
@@ -101,3 +108,4 @@ TEST_F(PaymentServiceTest, FailedPaymentDoesNotUpdateStatistics) {
     EXPECT_EQ(service_.getProcessedPaymentCount(), 1);
     EXPECT_DOUBLE_EQ(service_.getLastProcessedAmount(), 100.0);
 }
+
