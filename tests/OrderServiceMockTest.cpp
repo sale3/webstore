@@ -107,7 +107,7 @@ TEST_F(OrderServiceMockTest, UnavailableProductStopsBeforePayment){
     const OrderResult results = orderService_.placeOrder(kProductId, kQuantity, kAmount);
 
     //Assert
-    EXPECT_EQ(results, OrderResult::InvalidProduct);
+    EXPECT_EQ(results, OrderResult::ProductUnavailable);
 }
 
 TEST_F(OrderServiceMockTest, FailedPaymentStopsBeforeReducingStock){
