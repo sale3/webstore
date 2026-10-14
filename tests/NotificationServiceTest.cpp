@@ -1,6 +1,7 @@
 #include "NotificationService.h"
 
 #include <gtest/gtest.h>
+#include <stdexcept>
 
 class NotificationServiceTest : public ::testing::Test {
 protected:
@@ -16,6 +17,7 @@ class NotificationServiceInvalidOrderIdTest
 
 TEST_P(NotificationServiceInvalidOrderIdTest, InvalidValuesExpectFailure) {
     // Arrange
+    ASSERT_EQ(service_.getNotificationCount(), 0);
     const int invalidOrderId = GetParam();
 
     // Act & Assert
@@ -23,6 +25,7 @@ TEST_P(NotificationServiceInvalidOrderIdTest, InvalidValuesExpectFailure) {
         service_.sendOrderConfirmation(invalidOrderId),
         std::invalid_argument
     );
+    EXPECT_EQ(service_.getNotificationCount(), 0);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -41,6 +44,8 @@ class NotificationServiceValidOrderIdTest
 TEST_P(NotificationServiceValidOrderIdTest, ValidValuesExpectSuccess) {
     // Arrange
     const int validOrderId = GetParam();
+    ASSERT_EQ(service_.getNotificationCount(), 0);
+    ASSERT_FALSE(service_.wasConfirmationSent(validOrderId));
 
     // Act
     service_.sendOrderConfirmation(validOrderId);
@@ -60,6 +65,8 @@ INSTANTIATE_TEST_SUITE_P(
 class NotificationServiceWithConfirmationTest : public NotificationServiceTest {
     protected:
         void SetUp() override {
+            ASSERT_EQ(service_.getNotificationCount(), 0);
+            ASSERT_FALSE(service_.wasConfirmationSent(1000));
             service_.sendOrderConfirmation(1000);
         }
 
@@ -68,16 +75,21 @@ class NotificationServiceWithConfirmationTest : public NotificationServiceTest {
 TEST_F(NotificationServiceWithConfirmationTest, SendOrderConfirmationRecordsOrderId){
     // Assert
     EXPECT_EQ(service_.getNotificationCount(), 1);
+    ASSERT_EQ(service_.getConfirmedOrderIds().size(), 1u);
     EXPECT_EQ(service_.getConfirmedOrderIds()[0], 1000);
 }
 
 TEST_F(NotificationServiceWithConfirmationTest, SendOrderConfirmationRecordsMultipleOrders) {
+    //Arrange
+    ASSERT_EQ(service_.getNotificationCount(), 1);
+
     // Act
     service_.sendOrderConfirmation(1001);
 
     // Assert
     EXPECT_EQ(service_.getNotificationCount(), 2);
 }
+
 TEST_F(NotificationServiceWithConfirmationTest, WasConfirmationSentReturnsTrueForSentOrder) {
     // Act & Assert
     EXPECT_TRUE(service_.wasConfirmationSent(1000));
