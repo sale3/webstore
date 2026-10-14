@@ -65,7 +65,7 @@ class NotificationServiceWithConfirmationTest : public NotificationServiceTest {
 
 };
 
-TEST_F(NotificationServiceWithConfirmationTest,SendOrderConfirmationRecordsOrderId ){
+TEST_F(NotificationServiceWithConfirmationTest, SendOrderConfirmationRecordsOrderId){
     // Assert
     EXPECT_EQ(service_.getNotificationCount(), 1);
     EXPECT_EQ(service_.getConfirmedOrderIds()[0], 1000);
