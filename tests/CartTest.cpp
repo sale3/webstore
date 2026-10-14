@@ -15,10 +15,12 @@ class AddingInvalidQuantityTest: public CartTest, public::testing::WithParamInte
 TEST_P(AddingInvalidQuantityTest, InvalidQuantityThrows) {
    //Arrange
     const int quantity = GetParam();
-    
+    ASSERT_TRUE(cart.isEmpty());
+
     //Act & Assert
     EXPECT_THROW(cart.addProduct(product_, quantity), std::invalid_argument);
-};
+    EXPECT_TRUE(cart.isEmpty());
+}
 
 INSTANTIATE_TEST_SUITE_P(
     InvalidQuantities,
@@ -32,8 +34,12 @@ class AddingValidQuantityTest: public CartTest, public::testing::WithParamInterf
 TEST_P(AddingValidQuantityTest, ValidQuantityAddsProduct) {
     //Arrange
     const int quantity = GetParam();
+    ASSERT_EQ(cart.getItemCount(), 0);
+    ASSERT_EQ(cart.getDifferentProductCount(), 0u);
+
     //Act
     cart.addProduct(product_, quantity);
+
     //Assert
     EXPECT_EQ(cart.getItemCount(), quantity);
     EXPECT_EQ(cart.getDifferentProductCount(), 1u);
@@ -46,15 +52,22 @@ INSTANTIATE_TEST_SUITE_P(
 );
 
 // remove product tests
-
-class RemovingProductTest: public CartTest, public::testing::WithParamInterface<std::tuple<int, bool, int>> {};
+class RemovingProductTest : public CartTest,
+                            public::testing::WithParamInterface<std::tuple<
+                            int,        //ID proizvoda koji se uklanja
+                            bool,       //očekivani rezultat removeProduct()
+                            int>> {};   //očekivani broj stavki u korpi nakon uklanjanja
 
 TEST_P(RemovingProductTest, RemoveBehavesAsExpected) {
     //Arrange
     const auto& [paramProductId, expectedRemoved, expectedItemCountAfter] = GetParam();
+    ASSERT_EQ(cart.getItemCount(), 0);
     cart.addProduct(product_, 2);
+    ASSERT_EQ(cart.getItemCount(), 2);
+
     //Act
     const bool removed = cart.removeProduct(paramProductId);
+
     //Assert
     EXPECT_EQ(removed, expectedRemoved);
     EXPECT_EQ(cart.getItemCount(), expectedItemCountAfter);
@@ -80,7 +93,11 @@ TEST_F(CartTest, NewCartIsEmpty) {
 
 
 TEST_F(CartTest, AddingSameProductIncreasesQuantity) {
-    //Arrange & Act
+    //Arrange
+    ASSERT_EQ(cart.getItemCount(), 0);
+    ASSERT_EQ(cart.getDifferentProductCount(), 0u);
+
+    //Act
     cart.addProduct(product_, 2);
     cart.addProduct(product_, 3);
 
@@ -90,9 +107,14 @@ TEST_F(CartTest, AddingSameProductIncreasesQuantity) {
 }
 
 TEST_F(CartTest, AddingDifferentProductsCountsSeparately) {
-    //Arrange &Act
+    //Arrange
+    ASSERT_EQ(cart.getItemCount(), 0);
+    ASSERT_EQ(cart.getDifferentProductCount(), 0u);
+
+    //Act
     cart.addProduct(product_, 1);
     cart.addProduct(otherProduct_, 1);
+
     //Assert
     EXPECT_EQ(cart.getItemCount(), 2);
     EXPECT_EQ(cart.getDifferentProductCount(), 2u);
@@ -101,8 +123,10 @@ TEST_F(CartTest, AddingDifferentProductsCountsSeparately) {
 
 TEST_F(CartTest, CalculatesTotalAcrossMultipleProducts) {
     //Arrange 
+    ASSERT_DOUBLE_EQ(cart.calculateTotal(), 0.0);
     cart.addProduct(product_, 2);
     cart.addProduct(otherProduct_, 1);
+
     //Act
     const double total = cart.calculateTotal();
 
@@ -115,8 +139,12 @@ TEST_F(CartTest, RemovingOneProductKeepsOthers) {
     //Arrange
     cart.addProduct(product_, 1);
     cart.addProduct(otherProduct_, 1);
+    ASSERT_EQ(cart.getDifferentProductCount(), 2u);
+    ASSERT_DOUBLE_EQ(cart.calculateTotal(), 145.0);
+
     //Act
     cart.removeProduct(product_.getId());
+
     //Assert
     EXPECT_EQ(cart.getDifferentProductCount(), 1u);
     EXPECT_DOUBLE_EQ(cart.calculateTotal(), 45.0);
@@ -126,8 +154,13 @@ TEST_F(CartTest, ClearEmptiesTheCart) {
     //Arrange 
     cart.addProduct(product_, 2);
     cart.addProduct(otherProduct_, 1);
+    ASSERT_FALSE(cart.isEmpty());
+    ASSERT_EQ(cart.getItemCount(), 3);
+    ASSERT_EQ(cart.getDifferentProductCount(), 2u);
+
     //Act
     cart.clear();
+
     //Assert
     EXPECT_TRUE(cart.isEmpty());
     EXPECT_EQ(cart.getItemCount(), 0);
@@ -135,7 +168,11 @@ TEST_F(CartTest, ClearEmptiesTheCart) {
 }
 
 TEST_F(CartTest, GetItemsReturnsCorrectContents) {
-    // Arrange & Act
+    //Arrange
+    ASSERT_TRUE(cart.getItems().empty());
+    ASSERT_EQ(cart.getItems().size(), 0u);
+    
+    //Act
     cart.addProduct(product_, 2);
     cart.addProduct(otherProduct_, 1);
 
