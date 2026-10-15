@@ -1,4 +1,5 @@
-//јавни дио алата
+// Јавни дио алата за мутационо тестирање: структуре и функције
+// које користе и mutation_tester (main) и тестови алата.
 #pragma once
 
 #include <atomic>
@@ -12,7 +13,7 @@ namespace mutation {
 
 namespace fs = std::filesystem;
 
-// један мутант - гдје је направљен, како изгледа и како је прошао
+// Један мутант: гдје је направљен, како изгледа и како је прошао.
 struct Mutant {
     int id = 0;
     std::string file;          // путања релативно у односу на root пројекта
@@ -26,7 +27,7 @@ struct Mutant {
     std::string expected;      // само за планиране мутације: killed или equivalent
 };
 
-// једна измјена коју mutateLine направи у линији кода.
+// Једна измјена коју mutateLine направи у линији кода.
 struct LineMutation {
     std::string op;
     std::string description;
@@ -39,11 +40,11 @@ struct Score {
     double percent = 0.0;
 };
 
-// постаје true кад корисник притисне Ctrl+C
+// Постаје true кад корисник притисне Ctrl+C.
 extern std::atomic<bool> g_interrupted;
 void onInterrupt(int);
 
-// ---------- хелпер функције ----------
+// ---------- Помоћне функције за текст и фајлове ----------
 std::string readBytes(const fs::path& path);
 void writeBytes(const fs::path& path, const std::string& content);
 std::vector<std::string> splitKeepEndings(const std::string& text);
@@ -57,27 +58,47 @@ bool insideLiteral(const std::vector<std::pair<std::size_t, std::size_t>>& range
                    std::size_t pos);
 std::string codePart(const std::string& line);
 
-// ---------- мутациони оператори ----------
+// ---------- Мутациони оператори ----------
 std::vector<LineMutation> mutateLine(const std::string& line);
 std::vector<Mutant> generateMutants(const std::vector<fs::path>& files, const fs::path& root);
 
-// ---------- компајлирање и покретање тестова ----------
-std::string quote(const fs::path& path);
-bool build(const fs::path& buildDir);
-std::string runTests(const fs::path& buildDir);
-std::string firstFailedTest(const fs::path& buildDir);
-void ensureConfigured(const fs::path& buildDir, const fs::path& root);
-void testMutant(Mutant& mutant, const fs::path& root, const fs::path& buildDir);
+// ---------- Компајлирање и покретање тестова ----------
 
-// ---------- извјештај ----------
+// Покретање спољних команди (cmake, ctest) издвојено је у интерфејс,
+// да би се у тестовима могло замијенити mock објектом.
+class CommandRunner {
+public:
+    virtual ~CommandRunner() = default;
+    // Покреће команду, излаз пише у log. Враћа статус који врати систем (0 = успјех).
+    virtual int run(const std::string& command, const fs::path& log) = 0;
+};
+
+// Права имплементација: команду покреће преко std::system.
+class SystemCommandRunner : public CommandRunner {
+public:
+    int run(const std::string& command, const fs::path& log) override;
+};
+
+std::string quote(const fs::path& path);
+bool interruptedByCtrlC(int status);
+bool runCommand(CommandRunner& runner, const std::string& command, const fs::path& log);
+bool build(CommandRunner& runner, const fs::path& buildDir);
+std::string runTests(CommandRunner& runner, const fs::path& buildDir);
+std::string firstFailedTest(const fs::path& buildDir);
+void ensureConfigured(CommandRunner& runner, const fs::path& buildDir, const fs::path& root);
+void testMutant(Mutant& mutant, const fs::path& root, const fs::path& buildDir,
+                CommandRunner& runner);
+
+// ---------- Извјештај ----------
 bool isKilled(const Mutant& m);
 Score score(const std::vector<const Mutant*>& mutants);
 std::string percent(double value);
 std::string cell(const std::string& text);
 std::string createReport(const std::vector<Mutant>& mutants);
 
-// ---------- планиране мутације (--plan) ----------
+// ---------- Планиране мутације (--plan) ----------
+// Баца std::runtime_error ако фајл не постоји или план има грешке.
 std::vector<Mutant> loadPlan(const fs::path& planPath, const fs::path& root);
 std::string createPlanReport(const std::vector<Mutant>& mutants);
 
-} 
+}  // namespace mutation
