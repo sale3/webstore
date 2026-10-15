@@ -62,17 +62,24 @@ TEST_F(OrderServiceMockTest, EachOrderGetsNextOrderId){
     }
 
     //Act
-    orderService_.placeOrder(kProductId, kQuantity, kAmount);
-    orderService_.placeOrder(kProductId, kQuantity, kAmount);
+    const OrderResult first = orderService_.placeOrder(kProductId, kQuantity, kAmount);
+    const OrderResult second = orderService_.placeOrder(kProductId, kQuantity, kAmount);
+
+    //Assert
+    EXPECT_EQ(first, OrderResult::Success);
+    EXPECT_EQ(second, OrderResult::Success);
 }
 
 //----Neuspjesno----
 
-class OrderServiceMockInvalidInputTest
-    : public OrderServiceMockTest,
-      public ::testing::WithParamInterface<std::tuple<int, int, double, OrderResult>> {}; //id, quantity, amount, results
+class OrderServiceMockInvalidInputTest : public OrderServiceMockTest,
+                                         public ::testing::WithParamInterface<std::tuple<
+                                         int,               //id
+                                         int,               //quantity
+                                         double,            //amount
+                                         OrderResult>> {};  //result
 
-      //posto je StrictMock on treba da obori test na bilo koji poziv 
+//posto je StrictMock on treba da obori test na bilo koji poziv 
 TEST_P(OrderServiceMockInvalidInputTest, RejectsInputWithoutCallingDependencies) {
     // Arrange
     const auto [productId, quantity, amount, expected] = GetParam();
@@ -104,10 +111,10 @@ TEST_F(OrderServiceMockTest, UnavailableProductStopsBeforePayment){
     //Arrange
     EXPECT_CALL(inventory_, isAvailable(kProductId, kQuantity)).WillOnce(Return(false));
     //Act
-    const OrderResult results = orderService_.placeOrder(kProductId, kQuantity, kAmount);
+    const OrderResult result = orderService_.placeOrder(kProductId, kQuantity, kAmount);
 
     //Assert
-    EXPECT_EQ(results, OrderResult::ProductUnavailable);
+    EXPECT_EQ(result, OrderResult::ProductUnavailable);
 }
 
 TEST_F(OrderServiceMockTest, FailedPaymentStopsBeforeReducingStock){
@@ -115,9 +122,9 @@ TEST_F(OrderServiceMockTest, FailedPaymentStopsBeforeReducingStock){
     EXPECT_CALL(inventory_, isAvailable(kProductId, kQuantity)).WillOnce(Return(true));
     EXPECT_CALL(payment_, processPayment(kAmount)).WillOnce(Return(false));
     //Act
-    const OrderResult results = orderService_.placeOrder(kProductId, kQuantity, kAmount);
+    const OrderResult result = orderService_.placeOrder(kProductId, kQuantity, kAmount);
     //Assert
-    EXPECT_EQ(results, OrderResult::PaymentFailed);
+    EXPECT_EQ(result, OrderResult::PaymentFailed);
 }
 
 TEST_F(OrderServiceMockTest, FailedStockUpdateStopsBeforeConfirmation){
@@ -126,8 +133,8 @@ TEST_F(OrderServiceMockTest, FailedStockUpdateStopsBeforeConfirmation){
     EXPECT_CALL(payment_, processPayment(kAmount)).WillOnce(Return(true));
     EXPECT_CALL(inventory_, reduceStock(kProductId, kQuantity)).WillOnce(Return(false));
     //Act
-    const OrderResult results = orderService_.placeOrder(kProductId, kQuantity, kAmount);
+    const OrderResult result = orderService_.placeOrder(kProductId, kQuantity, kAmount);
     //Assert
-    EXPECT_EQ(results, OrderResult::StockUpdateFailed);
+    EXPECT_EQ(result, OrderResult::StockUpdateFailed);
 }
 
