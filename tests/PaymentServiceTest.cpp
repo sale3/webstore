@@ -31,12 +31,16 @@ INSTANTIATE_TEST_SUITE_P(
 );
 
 // Сваки позитиван лимит је исправан (и они мањи од 1)
-TEST(PaymentServiceConstructorTest, AcceptsSmallPositiveTransactionLimit) {
+TEST(PaymentServiceConstructorValidTest, AcceptsSmallPositiveTransactionLimit) {
     //Act & Assert
     EXPECT_NO_THROW(PaymentService{0.5});
 }
 
-class PaymentServiceProcessPaymentTest : public PaymentServiceTest, public ::testing::WithParamInterface<std::tuple<double, bool, bool>> {
+class PaymentServiceProcessPaymentTest : public PaymentServiceTest,
+                                         public ::testing::WithParamInterface<std::tuple<
+                                         double,        //amount
+                                         bool,          //is service available
+                                         bool>> {       //expected payment output - true/false
     protected:
     void SetUp() override {
         const auto& [amount, serviceAvailable, expectedResult] = GetParam();
@@ -47,10 +51,16 @@ class PaymentServiceProcessPaymentTest : public PaymentServiceTest, public ::tes
 TEST_P(PaymentServiceProcessPaymentTest, ReturnsExpectedResult) {
     //Arrange
     const auto& [amount, serviceAvailable, expectedResult] = GetParam();
+    ASSERT_EQ(service_.getProcessedPaymentCount(), 0);
+    ASSERT_DOUBLE_EQ(service_.getLastProcessedAmount(), 0.0);
+
     //Act
     const bool result = service_.processPayment(amount);
+
     //Assert
     EXPECT_EQ(result, expectedResult);
+    EXPECT_EQ(service_.getProcessedPaymentCount(), expectedResult ? 1 : 0);
+    EXPECT_DOUBLE_EQ(service_.getLastProcessedAmount(), expectedResult ? amount : 0.0);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -68,7 +78,7 @@ INSTANTIATE_TEST_SUITE_P(
 );
 
 
-//fixtures
+//non-parameterized tests
 TEST_F(PaymentServiceTest, NewServiceIsAvailableByDefault) {
     //Act & Assert
     EXPECT_TRUE(service_.isServiceAvailable());
@@ -81,8 +91,13 @@ TEST_F(PaymentServiceTest, NewServiceHasNoProcessedPayments) {
 }
 
 TEST_F(PaymentServiceTest, SuccessfulPaymentUpdatesStatistics) {
+    //Arrange
+    ASSERT_EQ(service_.getProcessedPaymentCount(), 0);
+    ASSERT_DOUBLE_EQ(service_.getLastProcessedAmount(), 0.0);
+
     //Act
     const bool result = service_.processPayment(250.0);
+
     //Assert
     EXPECT_TRUE(result);
     EXPECT_DOUBLE_EQ(service_.getLastProcessedAmount(), 250.0);
@@ -90,9 +105,14 @@ TEST_F(PaymentServiceTest, SuccessfulPaymentUpdatesStatistics) {
 }
 
 TEST_F(PaymentServiceTest, ProcessedPaymentCountAccumulates) {
+    //Arrange
+    ASSERT_EQ(service_.getProcessedPaymentCount(), 0);
+    ASSERT_DOUBLE_EQ(service_.getLastProcessedAmount(), 0.0);
+
     //Act
     service_.processPayment(100.0);
     service_.processPayment(200.0);
+
     //Assert
     EXPECT_EQ(service_.getProcessedPaymentCount(), 2);
     EXPECT_DOUBLE_EQ(service_.getLastProcessedAmount(), 200.0);
@@ -101,11 +121,14 @@ TEST_F(PaymentServiceTest, ProcessedPaymentCountAccumulates) {
 TEST_F(PaymentServiceTest, FailedPaymentDoesNotUpdateStatistics) {
     //Arrange
     service_.processPayment(100.0);
+    ASSERT_EQ(service_.getProcessedPaymentCount(), 1);
+    ASSERT_DOUBLE_EQ(service_.getLastProcessedAmount(), 100.0);
+    
     //Act
     const bool result = service_.processPayment(-50.0);
+
     //Assert
     EXPECT_FALSE(result);
     EXPECT_EQ(service_.getProcessedPaymentCount(), 1);
     EXPECT_DOUBLE_EQ(service_.getLastProcessedAmount(), 100.0);
 }
-
