@@ -19,6 +19,9 @@ TEST_F(LoggerTest, NewLoggerHasNoMessages)
 
 TEST_F(LoggerTest, LogIncreasesMessageCount)
 {
+    //Arrange
+    ASSERT_EQ(logger_.getMessageCount(), 0);
+
     // Act
     logger_.log("First message");
     logger_.log("Second message");
@@ -30,6 +33,7 @@ TEST_F(LoggerTest, LogIncreasesMessageCount)
 TEST_F(LoggerTest, GetMessagesReturnsMessagesInLoggedOrder)
 {
     // Arrange
+    ASSERT_TRUE(logger_.getMessages().empty());
     logger_.log("A");
     logger_.log("B");
     logger_.log("C");
@@ -46,6 +50,9 @@ TEST_F(LoggerTest, GetMessagesReturnsMessagesInLoggedOrder)
 
 TEST_F(LoggerTest, LogKeepsDuplicateMessages)
 {
+     // Arrange
+    ASSERT_EQ(logger_.getMessageCount(), 0);
+    
     // Act
     logger_.log("SameMessage");
     logger_.log("SameMessage");
