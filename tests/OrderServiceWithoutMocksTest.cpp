@@ -10,16 +10,24 @@ class OrderServiceWithoutMocksTest : public ::testing::Test {
 protected:
     static constexpr int kProductId = 1;
     static constexpr int kInitialStock = 10;
-    static constexpr double kTransactionalLimit = 1000.0;
+    static constexpr double kTransactionLimit = 1000.0;
     static constexpr double kValidAmount = 50.0;
     static constexpr double kAmountOverLimit = 5000.0;
 
     void SetUp() override {
-        inventoryService_.setStock(kProductId, kInitialStock);
-    }
+    //Initial state
+    ASSERT_EQ(paymentService_.getProcessedPaymentCount(), 0);
+    ASSERT_DOUBLE_EQ(paymentService_.getLastProcessedAmount(), 0.0);
+    ASSERT_EQ(notificationService_.getNotificationCount(), 0);
+    ASSERT_TRUE(notificationService_.getConfirmedOrderIds().empty());
+    ASSERT_EQ(logger_.getMessageCount(), 0);
+
+    inventoryService_.setStock(kProductId, kInitialStock);
+    ASSERT_EQ(inventoryService_.getStock(kProductId), kInitialStock);
+}
 
     InventoryService inventoryService_;
-    PaymentService paymentService_{kTransactionalLimit};
+    PaymentService paymentService_{kTransactionLimit};
     NotificationService notificationService_;
     Logger logger_;
 
@@ -27,7 +35,9 @@ protected:
     void ExpectNothingChanged() const {
         EXPECT_EQ(inventoryService_.getStock(kProductId), kInitialStock);
         EXPECT_EQ(paymentService_.getProcessedPaymentCount(), 0);
+        EXPECT_DOUBLE_EQ(paymentService_.getLastProcessedAmount(), 0.0);
         EXPECT_EQ(notificationService_.getNotificationCount(), 0);
+        EXPECT_TRUE(notificationService_.getConfirmedOrderIds().empty());
         EXPECT_EQ(logger_.getMessageCount(), 0);
     }
 
@@ -58,6 +68,9 @@ TEST_F(OrderServiceWithoutMocksTest, SmallPositiveAmountIsAccepted) {
 }
 
 TEST_F(OrderServiceWithoutMocksTest, SuccessfulOrderReducesStock) {
+    // Arrange
+    ASSERT_EQ(inventoryService_.getStock(kProductId), kInitialStock);
+
     // Act
     orderService_.placeOrder(kProductId, 3, kValidAmount);
 
@@ -66,6 +79,10 @@ TEST_F(OrderServiceWithoutMocksTest, SuccessfulOrderReducesStock) {
 }
 
 TEST_F(OrderServiceWithoutMocksTest, SuccessfulOrderProcessesPayment) {
+    // Arrange
+    ASSERT_EQ(paymentService_.getProcessedPaymentCount(), 0);
+    ASSERT_DOUBLE_EQ(paymentService_.getLastProcessedAmount(), 0.0);
+
     // Act
     orderService_.placeOrder(kProductId, 3, kValidAmount);
 
@@ -75,6 +92,9 @@ TEST_F(OrderServiceWithoutMocksTest, SuccessfulOrderProcessesPayment) {
 }
 
 TEST_F(OrderServiceWithoutMocksTest, SuccessfulOrderSendsConfirmation) {
+    // Arrange
+    ASSERT_EQ(notificationService_.getNotificationCount(), 0);
+
     // Act
     orderService_.placeOrder(kProductId, 3, kValidAmount);
 
@@ -83,6 +103,9 @@ TEST_F(OrderServiceWithoutMocksTest, SuccessfulOrderSendsConfirmation) {
 }
 
 TEST_F(OrderServiceWithoutMocksTest, SuccessfulOrderWritesLogMessage) {
+    // Arrange
+    ASSERT_EQ(logger_.getMessageCount(), 0);
+
     // Act
     orderService_.placeOrder(kProductId, 3, kValidAmount);
 
@@ -92,6 +115,9 @@ TEST_F(OrderServiceWithoutMocksTest, SuccessfulOrderWritesLogMessage) {
 
 
 TEST_F(OrderServiceWithoutMocksTest, GeneratedOrderIdsAreUniquePerCall) {
+    // Arrange
+    ASSERT_TRUE(notificationService_.getConfirmedOrderIds().empty());
+
     // Act
     orderService_.placeOrder(kProductId, 1, 10.0);
     orderService_.placeOrder(kProductId, 1, 10.0);
@@ -105,6 +131,9 @@ TEST_F(OrderServiceWithoutMocksTest, GeneratedOrderIdsAreUniquePerCall) {
 // --- Granicne vrijednost/slucajevi ---
 
 TEST_F(OrderServiceWithoutMocksTest, OrderingEntireStockSucceeds) {
+    // Arrange
+    ASSERT_EQ(inventoryService_.getStock(kProductId), kInitialStock);
+
     // Act
     const OrderResult result = orderService_.placeOrder(kProductId, kInitialStock, kValidAmount);
 
@@ -124,7 +153,7 @@ TEST_F(OrderServiceWithoutMocksTest, OrderingOneMoreThanStockFails) {
 
 TEST_F(OrderServiceWithoutMocksTest, AmountEqualToLimitSucceeds) {
     // Act
-    const OrderResult result = orderService_.placeOrder(kProductId, 1, kTransactionalLimit);
+    const OrderResult result = orderService_.placeOrder(kProductId, 1, kTransactionLimit);
 
     // Assert
     EXPECT_EQ(result, OrderResult::Success);
@@ -132,16 +161,19 @@ TEST_F(OrderServiceWithoutMocksTest, AmountEqualToLimitSucceeds) {
 
 TEST_F(OrderServiceWithoutMocksTest, AmountJustAboveLimitFails) {
     // Act
-    const OrderResult result = orderService_.placeOrder(kProductId, 1, kTransactionalLimit + 0.01);
+    const OrderResult result = orderService_.placeOrder(kProductId, 1, kTransactionLimit + 0.01);
 
     // Assert
     EXPECT_EQ(result, OrderResult::PaymentFailed);
 }
 
 // --- Neispavni ulazi ---
-class OrderServiceInvalidInputTest
-    : public OrderServiceWithoutMocksTest,
-      public ::testing::WithParamInterface<std::tuple<int, int, double, OrderResult>> {};
+class OrderServiceInvalidInputTest : public OrderServiceWithoutMocksTest,
+                                     public ::testing::WithParamInterface<std::tuple<
+                                     int,                   //productId
+                                     int,                   //ordered quantity
+                                     double,                //payment amount
+                                     OrderResult>> {};      //expected result of placeOrder()
 
 TEST_P(OrderServiceInvalidInputTest, RejectsInputAndCausesNoSideEffects) {
     // Arrange
@@ -159,12 +191,12 @@ INSTANTIATE_TEST_SUITE_P(
     InvalidInputs,
     OrderServiceInvalidInputTest,
     ::testing::Values(
-        std::make_tuple(0,  3, 50.0,  OrderResult::InvalidProduct),
-        std::make_tuple(-1, 3, 50.0,  OrderResult::InvalidProduct),
-        std::make_tuple(1,  0, 50.0,  OrderResult::InvalidQuantity),
-        std::make_tuple(1, -1, 50.0,  OrderResult::InvalidQuantity),
-        std::make_tuple(1,  3, 0.0,   OrderResult::InvalidAmount),
-        std::make_tuple(1,  3, -50.0, OrderResult::InvalidAmount)
+        std::make_tuple(0,  3, 50.0,  OrderResult::InvalidProduct), // id = 0
+        std::make_tuple(-1, 3, 50.0,  OrderResult::InvalidProduct), // id < 0
+        std::make_tuple(1,  0, 50.0,  OrderResult::InvalidQuantity),// quantity = 0
+        std::make_tuple(1, -1, 50.0,  OrderResult::InvalidQuantity),// quantity < 0
+        std::make_tuple(1,  3, 0.0,   OrderResult::InvalidAmount),  // amount = 0 
+        std::make_tuple(1,  3, -50.0, OrderResult::InvalidAmount)   // amount < 0
     )
 );
 
