@@ -1,5 +1,13 @@
+// Мутационо тестирање за webstore пројекат: улазна тачка (main).
+//
+// Алат прави мале, намјерне измјене (мутанте) у изворном коду из src/,
+// за сваки мутант поново компајлира тестове и покреће их:
+//   - ако бар један тест падне, мутант је "убијен";
+//   - ако сви тестови прођу, мутант је "преживио".
 // Мутациони скор = убијени / (убијени + преживјели).
-// овдје је само читање аргумената и редослијед корака.
+//
+// Сва логика је у mutation_core.h / mutation_core.cpp, овдје је само
+// читање аргумената и редослијед корака.
 
 #include "mutation_core.h"
 
@@ -9,6 +17,7 @@
 #include <csignal>
 #include <iomanip>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -40,13 +49,13 @@ void printUsage() {
               << DEFAULT_BUILD_DIR << ")\n";
 }
 
-}  // namespace
-
-int main(int argc, char* argv[]) {
+// Цијели ток алата. Изузеци из mutation_core хвата main().
+int runTool(int argc, char* argv[]) {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);  // ћирилица у виндовс конзоли
 #endif
 
+    SystemCommandRunner runner;
     const fs::path root = fs::absolute(PROJECT_ROOT);
     fs::path buildDir = DEFAULT_BUILD_DIR;
     std::string fileFilter;
@@ -106,15 +115,15 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    ensureConfigured(buildDir, root);
+    ensureConfigured(runner, buildDir, root);
 
     std::cout << "Провјера оригиналног кода...\n";
-    if (!build(buildDir)) {
+    if (!build(runner, buildDir)) {
         std::cerr << "Оригинални код се не компајлира, видјети "
                   << (buildDir / "mutation_build.log").generic_string() << "\n";
         return 1;
     }
-    if (runTests(buildDir) != "passed") {
+    if (runTests(runner, buildDir) != "passed") {
         std::cerr << "Тестови не пролазе на оригиналном коду. Прво их поправи.\n";
         return 1;
     }
@@ -124,7 +133,7 @@ int main(int argc, char* argv[]) {
 
     for (auto& m : mutants) {
         if (g_interrupted) break;
-        testMutant(m, root, buildDir);
+        testMutant(m, root, buildDir, runner);
         if (g_interrupted) break;
         std::cout << "[" << std::setw(3) << m.id << "/" << mutants.size() << "] "
                   << std::left << std::setw(18) << m.status << std::right << " " << m.file
@@ -134,7 +143,7 @@ int main(int argc, char* argv[]) {
         std::cout << "\nПрекинуто. Изворни фајлови су враћени у оригинално стање.\n";
     }
 
-    build(buildDir);  // поново компајлирај оригинални код
+    build(runner, buildDir);  // поново компајлирај оригинални код
 
     std::vector<Mutant> tested;
     for (const auto& m : mutants) {
@@ -153,4 +162,15 @@ int main(int argc, char* argv[]) {
               << ", скор " << percent(total.percent) << " (" << seconds << " s)\n"
               << "Извјештај: " << reportPath.generic_string() << "\n";
     return 0;
+}
+
+}  // namespace
+
+int main(int argc, char* argv[]) {
+    try {
+        return runTool(argc, argv);
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << "\n";
+        return 1;
+    }
 }
