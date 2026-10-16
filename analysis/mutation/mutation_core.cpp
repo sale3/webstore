@@ -1,5 +1,5 @@
-// логика алата за мутационо тестирање (све осим main()).
-// написана у посебном фајлу да би се моглао алат тесирати Google Test-ом
+// Логика алата за мутационо тестирање (све осим main-a)
+// Издвојена у засебан фајл да би се могла тестирати Google Testом.
 
 #include "mutation_core.h"
 
@@ -12,6 +12,7 @@
 #include <map>
 #include <regex>
 #include <sstream>
+#include <stdexcept>
 
 #ifndef _WIN32
 #include <sys/wait.h>
@@ -23,7 +24,7 @@ std::atomic<bool> g_interrupted{false};
 
 void onInterrupt(int) { g_interrupted = true; }
 
-// хелпер функције
+// Помоћне функције за текст и фајлове
 
 std::string readBytes(const fs::path& path) {
     std::ifstream in(path, std::ios::binary);
@@ -122,7 +123,7 @@ std::string codePart(const std::string& line) {
     return line;
 }
 
-// мутациони оператори
+// Мутациони оператори
 
 struct TokenOperator {
     std::string from;
@@ -308,6 +309,16 @@ std::vector<Mutant> generateMutants(const std::vector<fs::path>& files, const fs
 
 std::string quote(const fs::path& path) { return "\"" + path.generic_string() + "\""; }
 
+// Покреће команду преко std::system и њен излаз преусмјерава у log фајл.
+// GCOVR_EXCL_START
+// Танак омотач око std::system: једини дио алата који стварно покреће команде.
+// Не тестира се јединично, тестови умјесто њега користе MockCommandRunner.
+int SystemCommandRunner::run(const std::string& command, const fs::path& log) {
+    const std::string full = command + " > " + quote(log) + " 2>&1";
+    return std::system(full.c_str());
+}
+// GCOVR_EXCL_STOP
+
 // Да ли је команда прекинута са Ctrl+C.
 // std::system на Linuxу игнорише Ctrl+C у овом процесу док чека команду,
 // па се прекид препознаје по томе како је команда завршила.
@@ -315,15 +326,15 @@ bool interruptedByCtrlC(int status) {
 #ifdef _WIN32
     return static_cast<unsigned int>(status) == 0xC000013Au;  // STATUS_CONTROL_C_EXIT
 #else
-    return (WIFSIGNALED(status) && WTERMSIG(status) == SIGINT) ||
-           (WIFEXITED(status) && WEXITSTATUS(status) == 128 + SIGINT);
+    const bool killedBySigint = WIFSIGNALED(status) && WTERMSIG(status) == SIGINT;
+    const bool exitedWith130 = WIFEXITED(status) && WEXITSTATUS(status) == 128 + SIGINT;
+    return killedBySigint || exitedWith130;
 #endif
 }
 
 // Покреће команду, излаз пише у log фајл. Враћа true ако је успјела.
-bool runCommand(const std::string& command, const fs::path& log) {
-    const std::string full = command + " > " + quote(log) + " 2>&1";
-    const int status = std::system(full.c_str());
+bool runCommand(CommandRunner& runner, const std::string& command, const fs::path& log) {
+    const int status = runner.run(command, log);
     if (interruptedByCtrlC(status)) g_interrupted = true;
     return status == 0;
 }
@@ -331,19 +342,19 @@ bool runCommand(const std::string& command, const fs::path& log) {
 // Гради само тестове (и библиотеку од које зависе), а не цијели пројекат.
 // Да се гради све, cmake би покушао поново да линкује и mutation_tester.exe,
 // а на Windowsу се извршни фајл који је тренутно покренут не може пребрисати.
-bool build(const fs::path& buildDir) {
-    return runCommand("cmake --build " + quote(buildDir) + " --target order_system_tests",
+bool build(CommandRunner& runner, const fs::path& buildDir) {
+    return runCommand(runner,
+                      "cmake --build " + quote(buildDir) + " --target order_system_tests",
                       buildDir / "mutation_build.log");
 }
 
 // може вратити "passed", "failed" или "timeout".
-std::string runTests(const fs::path& buildDir) {
+std::string runTests(CommandRunner& runner, const fs::path& buildDir) {
     const fs::path log = buildDir / "mutation_test.log";
-    if (runCommand("ctest --test-dir " + quote(buildDir) + " --stop-on-failure --timeout 30"
-                   " -E \"^MutationTool\\.\"",  // тестови самог алата се не покрећу
-                   log)) {
-        return "passed";
-    }
+    const std::string command = "ctest --test-dir " + quote(buildDir) +
+                                " --stop-on-failure --timeout 30"
+                                " -E \"^MutationTool\\.\"";  // тестови самог алата се не покрећу
+    if (runCommand(runner, command, log)) return "passed";
     return readBytes(log).find("Timeout") != std::string::npos ? "timeout" : "failed";
 }
 
@@ -357,25 +368,28 @@ std::string firstFailedTest(const fs::path& buildDir) {
     pos = log.find(" - ", pos);
     if (pos == std::string::npos) return "";
     const std::size_t end = log.find(" (", pos);
-    return end == std::string::npos ? "" : log.substr(pos + 3, end - pos - 3);
+    if (end == std::string::npos) return "";
+    return log.substr(pos + 3, end - pos - 3);
 }
 
-void ensureConfigured(const fs::path& buildDir, const fs::path& root) {
+// Конфигурише build фолдер ако још није. Баца std::runtime_error ако не успије.
+void ensureConfigured(CommandRunner& runner, const fs::path& buildDir, const fs::path& root) {
     if (fs::exists(buildDir / "CMakeCache.txt")) return;
     std::cout << "Build фолдер " << buildDir.generic_string()
               << " није конфигурисан, конфигуришем...\n";
     fs::create_directories(buildDir);
+    const bool usePreset =
+        fs::exists(root / "CMakePresets.json") &&
+        fs::weakly_canonical(buildDir) == fs::weakly_canonical(root / "build" / "debug");
     std::string command;
-    if (fs::exists(root / "CMakePresets.json") &&
-        fs::weakly_canonical(buildDir) == fs::weakly_canonical(root / "build" / "debug")) {
+    if (usePreset) {
         command = "cmake --preset debug";
     } else {
         command = "cmake -S " + quote(root) + " -B " + quote(buildDir) +
                   " -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON";
     }
-    if (!runCommand(command, buildDir / "mutation_configure.log")) {
-        std::cerr << "Конфигурисање није успјело, видјети mutation_configure.log\n";
-        std::exit(1);
+    if (!runCommand(runner, command, buildDir / "mutation_configure.log")) {
+        throw std::runtime_error("Конфигурисање није успјело, видјети mutation_configure.log");
     }
 }
 
@@ -394,7 +408,8 @@ private:
     std::string original_;
 };
 
-void testMutant(Mutant& mutant, const fs::path& root, const fs::path& buildDir) {
+void testMutant(Mutant& mutant, const fs::path& root, const fs::path& buildDir,
+                CommandRunner& runner) {
     const fs::path path = root / mutant.file;
     const std::string originalBytes = readBytes(path);
     FileRestorer restorer(path, originalBytes);
@@ -407,10 +422,10 @@ void testMutant(Mutant& mutant, const fs::path& root, const fs::path& buildDir) 
     for (const auto& l : lines) mutated += l;
     writeBytes(path, mutated);
 
-    if (!build(buildDir)) {
+    if (!build(runner, buildDir)) {
         mutant.status = "не компајлира се";
     } else {
-        const std::string outcome = runTests(buildDir);
+        const std::string outcome = runTests(runner, buildDir);
         mutant.status = outcome == "passed"    ? "преживио"
                         : outcome == "timeout" ? "убијен (timeout)"
                                                : "убијен";
@@ -529,14 +544,13 @@ std::string createReport(const std::vector<Mutant>& mutants) {
 
 std::vector<Mutant> loadPlan(const fs::path& planPath, const fs::path& root) {
     if (!fs::exists(planPath)) {
-        std::cerr << "Фајл са планом не постоји: " << planPath.generic_string() << "\n";
-        std::exit(1);
+        throw std::runtime_error("Фајл са планом не постоји: " + planPath.generic_string());
     }
 
     std::vector<Mutant> mutants;
     std::map<std::string, std::string> fields;
     std::string id, title;
-    bool ok = true;
+    std::ostringstream errors;  // све грешке у плану, да се пријаве одједном
 
     auto finish = [&]() {
         if (id.empty()) return;
@@ -545,19 +559,16 @@ std::vector<Mutant> loadPlan(const fs::path& planPath, const fs::path& root) {
         const std::string mutant = fields["mutant"];
         std::string expected = fields.count("expected") ? fields["expected"] : "killed";
         if (file.empty() || original.empty()) {
-            std::cerr << "[" << id << "] недостаје file или original\n";
-            ok = false;
+            errors << "[" << id << "] недостаје file или original\n";
             return;
         }
         if (expected != "killed" && expected != "equivalent") {
-            std::cerr << "[" << id << "] expected мора бити killed или equivalent\n";
-            ok = false;
+            errors << "[" << id << "] expected мора бити killed или equivalent\n";
             return;
         }
         const fs::path path = root / file;
         if (!fs::exists(path)) {
-            std::cerr << "[" << id << "] фајл не постоји: " << file << "\n";
-            ok = false;
+            errors << "[" << id << "] фајл не постоји: " << file << "\n";
             return;
         }
 
@@ -579,9 +590,8 @@ std::vector<Mutant> loadPlan(const fs::path& planPath, const fs::path& root) {
             if (codePart(line).find(original) != std::string::npos) matches.push_back(i);
         }
         if (matches.size() != 1) {
-            std::cerr << "[" << id << "] \"" << original << "\" се у " << file << " појављује "
-                      << matches.size() << " пута (мора тачно једном)\n";
-            ok = false;
+            errors << "[" << id << "] \"" << original << "\" се у " << file << " појављује "
+                   << matches.size() << " пута (мора тачно једном)\n";
             return;
         }
 
@@ -614,15 +624,14 @@ std::vector<Mutant> loadPlan(const fs::path& planPath, const fs::path& root) {
         }
         const std::size_t colon = line.find(':');
         if (colon == std::string::npos || id.empty()) {
-            std::cerr << "Неисправна линија у плану: " << line << "\n";
-            ok = false;
+            errors << "Неисправна линија у плану: " << line << "\n";
             continue;
         }
         fields[trim(line.substr(0, colon))] = trim(line.substr(colon + 1));
     }
     finish();
 
-    if (!ok) std::exit(1);
+    if (!errors.str().empty()) throw std::runtime_error(errors.str());
     return mutants;
 }
 
@@ -641,16 +650,17 @@ std::string createPlanReport(const std::vector<Mutant>& mutants) {
         if (m.expected == "equivalent") ++equivalentCount;
     }
     const int nonEquivalent = static_cast<int>(mutants.size()) - equivalentCount;
+    const double nonEquivalentScore =
+        nonEquivalent > 0 ? 100.0 * total.killed / nonEquivalent : 0.0;
 
     std::ostringstream r;
-    r << "# Извјештај планираних мутација\n\n"
-      << "- Планираних мутација: **" << mutants.size() << "**\n"
-      << "- Убијени: **" << total.killed << "**\n"
-      << "- Преживјели: **" << total.survived << "**\n"
-      << "- Мутациони скор: **" << percent(total.percent) << "**\n"
-      << "- Скор без еквивалентних мутаната: **"
-      << percent(nonEquivalent > 0 ? 100.0 * total.killed / nonEquivalent : 0.0) << "**\n"
-      << "- Резултат као што је очекивано: **" << asExpected << " / " << mutants.size()
+    r << "# Извјештај планираних мутација\n\n";
+    r << "- Планираних мутација: **" << mutants.size() << "**\n";
+    r << "- Убијени: **" << total.killed << "**\n";
+    r << "- Преживјели: **" << total.survived << "**\n";
+    r << "- Мутациони скор: **" << percent(total.percent) << "**\n";
+    r << "- Скор без еквивалентних мутаната: **" << percent(nonEquivalentScore) << "**\n";
+    r << "- Резултат као што је очекивано: **" << asExpected << " / " << mutants.size()
       << "**\n\n"
       << "| ID | Опис | Фајл:линија | Оригинал | Мутант | Очекивано | Резултат | Убио га тест |\n"
       << "|---|---|---|---|---|---|---|---|\n";
@@ -669,4 +679,4 @@ std::string createPlanReport(const std::vector<Mutant>& mutants) {
     return r.str();
 }
 
-} 
+}  // namespace mutation
