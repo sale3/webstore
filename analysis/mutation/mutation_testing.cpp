@@ -1,13 +1,10 @@
-// Мутационо тестирање за webstore пројекат: улазна тачка (main).
 //
-// Алат прави мале, намјерне измјене (мутанте) у изворном коду из src/,
 // за сваки мутант поново компајлира тестове и покреће их:
 //   - ако бар један тест падне, мутант је "убијен";
 //   - ако сви тестови прођу, мутант је "преживио".
 // Мутациони скор = убијени / (убијени + преживјели).
 //
-// Сва логика је у mutation_core.h / mutation_core.cpp, овдје је само
-// читање аргумената и редослијед корака.
+
 
 #include "mutation_core.h"
 
@@ -49,10 +46,11 @@ void printUsage() {
               << DEFAULT_BUILD_DIR << ")\n";
 }
 
-// Цијели ток алата. Изузеци из mutation_core хвата main().
+// Цијели ток алата
+// Изузеци из mutation_core хвата main()
 int runTool(int argc, char* argv[]) {
 #ifdef _WIN32
-    SetConsoleOutputCP(CP_UTF8);  // ћирилица у виндовс конзоли
+    SetConsoleOutputCP(CP_UTF8); 
 #endif
 
     SystemCommandRunner runner;
@@ -81,7 +79,7 @@ int runTool(int argc, char* argv[]) {
     if (buildDir.is_relative()) buildDir = root / buildDir;
     fs::current_path(root);
 
-    // фајлови за мутирање: src/*.cpp (осим main.cpp)
+    // фајлови за мутирање су сви из src/ осим mainа
     std::vector<fs::path> files;
     for (const auto& entry : fs::directory_iterator(root / "src")) {
         const std::string name = entry.path().filename().string();
@@ -164,7 +162,7 @@ int runTool(int argc, char* argv[]) {
     return 0;
 }
 
-}  // namespace
+}  
 
 int main(int argc, char* argv[]) {
     try {
