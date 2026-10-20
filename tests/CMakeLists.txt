@@ -3,6 +3,7 @@ find_package(GTest REQUIRED)
 add_executable(order_system_tests
     SanityTest.cpp
     ProductInitialTest.cpp
+    DiscountCalculatorTest.cpp
 )
 
 target_include_directories(
