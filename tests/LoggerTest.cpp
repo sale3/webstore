@@ -60,7 +60,19 @@ TEST_F(LoggerTest, LogKeepsDuplicateMessages)
     // Assert
     EXPECT_EQ(logger_.getMessageCount(), 2);
 }
+TEST_F(LoggerTest, LogStoresEmptyMessage)
+{
+    // Arrange
+    ASSERT_EQ(logger_.getMessageCount(), 0);
 
+    // Act
+    logger_.log("");
+
+    // Assert
+    ASSERT_EQ(logger_.getMessageCount(), 1);
+    EXPECT_EQ(logger_.getMessages()[0], "");
+    EXPECT_TRUE(logger_.contains(""));
+} 
 TEST_F(LoggerTest, ContainsReturnsFalseWhenEmpty)
 {
     // Act & Assert
