@@ -110,7 +110,8 @@ TEST_F(OrderServiceWithoutMocksTest, SuccessfulOrderWritesLogMessage) {
     orderService_.placeOrder(kProductId, 3, kValidAmount);
 
     // Assert
-    EXPECT_EQ(logger_.getMessageCount(), 1);
+    ASSERT_EQ(logger_.getMessageCount(), 1);
+    EXPECT_EQ(logger_.getMessages()[0], "Order placed successfully. Order ID: 1000");
 }
 
 
@@ -231,7 +232,3 @@ TEST_F(OrderServiceWithoutMocksTest, UnavailablePaymentServiceStopsFurtherSteps)
     EXPECT_EQ(result, OrderResult::PaymentFailed);
     ExpectNothingChanged();
 }
-/*StockUpdateFailed нисам тестирала овдје јер увијек прође ако је
- isAvailable прошао па ћу је тестирати у OrderServiceMockTest, гдје ће ми IInventoryService::reduceStock враћати false иако
- је isAvailable вратио true */
-
