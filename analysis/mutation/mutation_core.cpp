@@ -53,28 +53,28 @@ std::vector<std::string> splitKeepEndings(const std::string& text) {
     }
     return lines;
 }
-
+// враћа крај линије
 std::string lineEnding(const std::string& line) {
     if (line.size() >= 2 && line.compare(line.size() - 2, 2, "\r\n") == 0) return "\r\n";
     if (!line.empty() && line.back() == '\n') return "\n";
     return "";
 }
-
+//линија без краја
 std::string withoutEnding(const std::string& line) {
     return line.substr(0, line.size() - lineEnding(line).size());
 }
-
+//уклања размаке, табове, крајеве реда са оба краја
 std::string trim(const std::string& s) {
     std::size_t begin = s.find_first_not_of(" \t\r\n");
     if (begin == std::string::npos) return "";
     std::size_t end = s.find_last_not_of(" \t\r\n");
     return s.substr(begin, end - begin + 1);
 }
-
+//враћа увлачење са почетка линије
 std::string indentOf(const std::string& line) {
     return line.substr(0, line.find_first_not_of(" \t"));
 }
-
+//враћа позиције стрингова - нпр одд 4 до 11 позиције је стринг
 bool startsWith(const std::string& s, const std::string& prefix) {
     return s.compare(0, prefix.size(), prefix) == 0;
 }
@@ -103,7 +103,7 @@ std::vector<std::pair<std::size_t, std::size_t>> literalRanges(const std::string
     }
     return ranges;
 }
-
+//каже да је позиција унутар литерала
 bool insideLiteral(const std::vector<std::pair<std::size_t, std::size_t>>& ranges,
                    std::size_t pos) {
     for (const auto& [begin, end] : ranges) {
@@ -112,7 +112,7 @@ bool insideLiteral(const std::vector<std::pair<std::size_t, std::size_t>>& range
     return false;
 }
 
-// дио линије прије // коментара (који није унутар стринга).
+// дио линије прије // коментара (који није унутар стринга) нпр "x = a + b;  // zbir"      →  "x = a + b;  "
 std::string codePart(const std::string& line) {
     const auto ranges = literalRanges(line);
     for (std::size_t i = 0; i + 1 < line.size(); ++i) {
@@ -277,7 +277,7 @@ std::vector<Mutant> generateMutants(const std::vector<fs::path>& files, const fs
     std::vector<Mutant> mutants;
     for (const auto& path : files) {
         const auto lines = splitKeepEndings(readBytes(path));
-        bool inBlockComment = false;
+        bool inBlockComment = false; //провјера да ли је у блок коментару та линија
         for (std::size_t index = 0; index < lines.size(); ++index) {
             const std::string line = withoutEnding(lines[index]);
             const std::string trimmed = trim(line);

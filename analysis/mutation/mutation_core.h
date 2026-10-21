@@ -13,21 +13,31 @@ namespace mutation {
 
 namespace fs = std::filesystem;
 
-// Један мутант: гдје је направљен, како изгледа и како је прошао.
+// Структура МУТАНТ
 struct Mutant {
     int id = 0;
-    std::string file;          // путања релативно у односу на root пројекта
+    std::string file;          // нпр src/Cart.cpp
     int line = 0;              // број линије (од 1)
     std::string op;            // скраћеница оператора (ROR, AOR, ...)
     std::string description;   // опис измјене
     std::string original;      // оригинална линија (без увлачења)
     std::string mutatedLine;   // цијела измијењена линија (са увлачењем)
-    std::string status = "непокренут";
+    std::string status = "непокренут";  //непокренут, убијен, преживио
     std::string killedBy;      // први тест који је пао
     std::string expected;      // само за планиране мутације: killed или equivalent
 };
 
-// Једна измјена коју mutateLine направи у линији кода.
+/*
+Могући статуси:
+- непокренут 
+- не компајлира се
+- убијен
+- убијен timeout - тестови трајали дуже од 30с 
+- преживио
+*/
+
+
+// једна могућа измјена једне линије 
 struct LineMutation {
     std::string op;
     std::string description;
