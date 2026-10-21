@@ -1,13 +1,125 @@
-# Планиране мутације/Ручно писане мутације
+# Планиране мутације (ручно писане)
 #
-# Покретање:
-#   .\build\debug\mutation_tester.exe --plan analysis/mutation/planned_mutations.txt
+# Свака мутација провјерава једно пословно правило из ASSIGNMENT.md.
+# expected: killed     - тестови морају открити грешку
+# expected: equivalent - измјена не мијења понашање, ниједан тест је не може открити
+#
 
+
+# ---------- Product ----------
+
+[M01] Дозвољен ID 0 (гранична вриједност идентификатора)
+file:     src/Product.cpp
+original: id_ <= 0
+mutant:   id_ < 0
+expected: killed
+
+# ---------- Cart ----------
+
+[M02] Додавање постојећег производа поставља количину умјесто да је увећа
+file:     src/Cart.cpp
+original: it->quantity += quantity;
+mutant:   it->quantity = quantity;
+expected: killed
+
+[M03] Укупна цијена занемарује количину
+file:     src/Cart.cpp
+original: item.quantity * item.product.getPrice()
+mutant:   item.product.getPrice()
+expected: killed
+
+# ---------- DiscountCalculator ----------
+
+[M04] Gold купац добија погрешан попуст (15% умјесто 10%)
+file:     src/DiscountCalculator.cpp
+original: discount = 10.0;
+mutant:   discount = 15.0;
+expected: killed
+
+[M05] Додатних 5% тек изнад 1000, а не од 1000 (гранична вриједност)
+file:     src/DiscountCalculator.cpp
+original: total >= 1000
+mutant:   total > 1000
+expected: killed
+
+[M06] Износ попуста се додаје на суму умјесто да се одузме
+file:     src/DiscountCalculator.cpp
+original: total - discountAmount;
+mutant:   total + discountAmount;
+expected: killed
+
+[M07] Ограничење на 20% и при тачно 20% - највећи могући попуст је 15 + 5 = 20
+file:     src/DiscountCalculator.cpp
+original: discount > 20.0
+mutant:   discount >= 20.0
+expected: equivalent
+
+[M08] Почетна вриједност попуста - свака грана switch-а је ионако поставља
+file:     src/DiscountCalculator.cpp
+original: double discount = 0.0;
+mutant:   double discount = 1.0;
+expected: equivalent
+
+# ---------- InventoryService ----------
+
+[M09] Наручивање цијеле залихе није дозвољено (гранична вриједност)
+file:     src/InventoryService.cpp
+original: it->second >= quantity
+mutant:   it->second > quantity
+expected: killed
+
+[M10] Стање се не смањује послије наруџбе
+file:     src/InventoryService.cpp
+original: stock_[productId] -= quantity;
+mutant:
+expected: killed
+
+# ---------- PaymentService ----------
+
+[M11] Плаћање износа једнаког лимиту се одбија (гранична вриједност)
+file:     src/PaymentService.cpp
+original: amount > transactionLimit_
+mutant:   amount >= transactionLimit_
+expected: killed
+
+[M12] Плаћање пролази и кад сервис није доступан
+file:     src/PaymentService.cpp
+original: !isServiceAvailable()
+mutant:   isServiceAvailable()
+expected: killed
 
 # ---------- NotificationService ----------
 
-[M01] Potvrda sa ID-jem narudžbe 0 ne smije biti poslata
+[M13] Потврда са ИД-јем наруџбе 0 не смије бити послата
 file:     src/NotificationService.cpp
 original: orderId <= 0
 mutant:   orderId < 0
+expected: killed
+
+# ---------- Logger ----------
+
+[M14] Лог поруке се не уписују
+file:     src/Logger.cpp
+original: messages_.push_back(message);
+mutant:
+expected: killed
+
+# ---------- OrderService ----------
+
+[M15] Неуспјело смањење стања се игнорише
+file:     src/OrderService.cpp
+original: if (stockReduced)
+mutant:   if (true)
+expected: killed
+
+[M16] Потврда наруџбе се не шаље
+file:     src/OrderService.cpp
+original: notificationService_.sendOrderConfirmation(id);
+mutant:
+expected: killed
+
+[M17] Свака наруџба добија исти ИД
+file:     src/OrderService.cpp
+original: return nextOrderId_++;
+mutant:   return nextOrderId_;
 expected: killed
