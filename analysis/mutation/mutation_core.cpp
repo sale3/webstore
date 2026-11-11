@@ -33,9 +33,12 @@ std::string readBytes(const fs::path& path) {
     return buffer.str();
 }
 
-void writeBytes(const fs::path& path, const std::string& content) {
+bool writeBytes(const fs::path& path, const std::string& content) {
     std::ofstream out(path, std::ios::binary | std::ios::trunc);
+    if (!out) return false;
     out << content;
+    out.close();
+    return !out.fail();
 }
 
 // дијели текст на линије и чува крај сваке линије ("\r\n", "\n" или "").
@@ -399,14 +402,30 @@ class FileRestorer {
 public:
     FileRestorer(fs::path path, std::string original)
         : path_(std::move(path)), original_(std::move(original)) {}
-    ~FileRestorer() { writeBytes(path_, original_); }
+    //враћа фајл само ако restore() није успјешно завршен
+    ~FileRestorer() {
+    if (!restored_) restoreFile(path_, original_);
+    }
     FileRestorer(const FileRestorer&) = delete;
     FileRestorer& operator=(const FileRestorer&) = delete;
+
+    // Враћа фајл и враћа да ли је то успјело.
+    bool restore() {
+        restored_ = restoreFile(path_, original_);
+        return restored_;
+    }
 
 private:
     fs::path path_;
     std::string original_;
+    bool restored_ = false;
 };
+
+//уписује оригинални садржај, поново га чита и пореди
+bool restoreFile(const fs::path& path, const std::string& original) {
+    if (!writeBytes(path, original)) return false;
+    return readBytes(path) == original;
+}
 
 void testMutant(Mutant& mutant, const fs::path& root, const fs::path& buildDir,
                 CommandRunner& runner) {
@@ -420,7 +439,9 @@ void testMutant(Mutant& mutant, const fs::path& root, const fs::path& buildDir,
 
     std::string mutated;
     for (const auto& l : lines) mutated += l;
-    writeBytes(path, mutated);
+    if (!writeBytes(path, mutated)) {
+        throw std::runtime_error("Не могу да упишем мутанта у " + mutant.file);
+    }
 
     if (!build(runner, buildDir)) {
         mutant.status = "не компајлира се";
@@ -431,8 +452,28 @@ void testMutant(Mutant& mutant, const fs::path& root, const fs::path& buildDir,
                                                : "убијен";
         if (outcome != "passed") mutant.killedBy = firstFailedTest(buildDir);
     }
+    // ако фајл није враћен, даљи резултати су неважећи, па се рад прекида
+    if (!restorer.restore()) {
+        throw std::runtime_error("Фајл " + mutant.file +
+                                 " није враћен у оригинално стање. Провјери га прије даљег рада.");
+    }
     if (g_interrupted) mutant.status = "непокренут";  // резултат прекинутог покретања не важи
 }
+
+FileSnapshot takeSnapshot(const std::vector<fs::path>& files) {
+    FileSnapshot snapshot;
+    for (const auto& path : files) snapshot.emplace_back(path, readBytes(path));
+    return snapshot;
+}
+
+std::vector<fs::path> changedFiles(const FileSnapshot& snapshot) {
+    std::vector<fs::path> changed;
+    for (const auto& [path, original] : snapshot) {
+        if (readBytes(path) != original) changed.push_back(path);
+    }
+    return changed;
+}
+
 
 // Извјештај
 

@@ -56,7 +56,7 @@ void onInterrupt(int);
 
 // ---------- Помоћне функције за текст и фајлове ----------
 std::string readBytes(const fs::path& path);
-void writeBytes(const fs::path& path, const std::string& content);
+bool writeBytes(const fs::path& path, const std::string& content);
 std::vector<std::string> splitKeepEndings(const std::string& text);
 std::string lineEnding(const std::string& line);
 std::string withoutEnding(const std::string& line);
@@ -98,6 +98,18 @@ std::string firstFailedTest(const fs::path& buildDir);
 void ensureConfigured(CommandRunner& runner, const fs::path& buildDir, const fs::path& root);
 void testMutant(Mutant& mutant, const fs::path& root, const fs::path& buildDir,
                 CommandRunner& runner);
+
+// ---------- Провјера враћања фајлова ----------
+
+// Враћа садржај фајла у `original` и врши провјеру да ли је добро враћено
+bool restoreFile(const fs::path& path, const std::string& original);
+
+// снепшот фајла прије мутација (путања, садржај).
+using FileSnapshot = std::vector<std::pair<fs::path, std::string>>;
+FileSnapshot takeSnapshot(const std::vector<fs::path>& files);
+
+// фајлови из снепшота који се разликују, ако је празно то значи да је коректно враћен оригинал
+std::vector<fs::path> changedFiles(const FileSnapshot& snapshot);
 
 // ---------- Извјештај ----------
 bool isKilled(const Mutant& m);

@@ -123,6 +123,8 @@ int runTool(int argc, char* argv[]) {
         std::cerr << "Тестови не пролазе на оригиналном коду. Прво их поправи.\n";
         return 1;
     }
+    // Снимак оргиналнигх фајлова - на крају се провјерава да су сви враћени исправно
+    const FileSnapshot snapshot = takeSnapshot(files);
 
     std::signal(SIGINT, onInterrupt);
     const auto start = std::chrono::steady_clock::now();
@@ -137,6 +139,18 @@ int runTool(int argc, char* argv[]) {
     }
     if (g_interrupted) {
         std::cout << "\nПрекинуто. Изворни фајлови су враћени у оригинално стање.\n";
+    }
+
+    // Провјера да ниједан фајл није измјењен
+    //јесте => исписује их на stderr, не пише уопште извјештај и враћа 1
+    const auto changed = changedFiles(snapshot);
+    if (!changed.empty()) {
+        std::cerr << "Грешка: ови фајлови се разликују од стања прије мутирања:\n";
+        for (const auto& path : changed) {
+            std::cerr << "  " << fs::relative(path, root).generic_string() << "\n";
+        }
+        std::cerr << "Извјештај није написан. Провјери фајлове прије даљег рада.\n";
+        return 1;
     }
 
     build(runner, buildDir);  // поново компајлирај оригинални код

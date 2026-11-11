@@ -742,6 +742,60 @@ TEST_F(TempProjectTest, ReadingMissingFileGivesEmptyText) {
     EXPECT_EQ(readFile("src/ne_postoji.cpp"), "");
 }
 
+
+TEST_F(TempProjectTest, WritingToFolderReportsFailure) {
+    // Путања је фолдер, па упис мора да пријави грешку
+    EXPECT_FALSE(writeBytes(root_ / "src", "x"));
+}
+
+//---- Vracanje originala i provjera ----
+
+
+TEST_F(TempProjectTest, RestoreFileRestoresOriginalContent) {
+    // Arrange
+    writeFile("src/a.cpp", "int x = 2;\n");
+
+    // Act
+    const bool restored = restoreFile(root_ / "src/a.cpp", "int x = 1;\n");
+
+    // Assert
+    EXPECT_TRUE(restored);
+    EXPECT_EQ(readFile("src/a.cpp"), "int x = 1;\n");
+}
+
+TEST_F(TempProjectTest, RestoreFileReportsFailureWhenFileCannotBeWritten) {
+    // Путања је фолдер, па се враћање не може извршити
+    EXPECT_FALSE(restoreFile(root_ / "src", "int x = 1;\n"));
+}
+
+TEST_F(TempProjectTest, ChangedFilesIsEmptyWhenNothingChanged) {
+    // Arrange
+    writeFile("src/a.cpp", "a");
+    writeFile("src/b.cpp", "b");
+    const auto snapshot = takeSnapshot({root_ / "src/a.cpp", root_ / "src/b.cpp"});
+
+    // Act & Assert
+    EXPECT_TRUE(changedFiles(snapshot).empty());
+}
+
+TEST_F(TempProjectTest, ChangedFilesFindsOnlyModifiedAndMissingFiles) {
+    // Arrange
+    writeFile("src/a.cpp", "a");
+    writeFile("src/b.cpp", "b");
+    writeFile("src/c.cpp", "c");
+    const auto snapshot = takeSnapshot(
+        {root_ / "src/a.cpp", root_ / "src/b.cpp", root_ / "src/c.cpp"});
+    writeFile("src/b.cpp", "b mutiran");   // измијењен
+    fs::remove(root_ / "src/c.cpp");       // обрисан
+
+    // Act
+    const auto changed = changedFiles(snapshot);
+
+    // Assert
+    EXPECT_EQ(changed, (std::vector<fs::path>{root_ / "src/b.cpp", root_ / "src/c.cpp"}));
+}
+
+
 //----Generisanje mutanata iz fajlova----
 
 class GenerateMutantsTest : public TempProjectTest {
