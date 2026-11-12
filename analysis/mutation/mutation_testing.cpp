@@ -111,6 +111,15 @@ int runTool(int argc, char* argv[]) {
         return 0;
     }
 
+    // у случају да је претходни рад прекинут на неки начин морамо да вратимо фајлове у првобитне верзије прије мутирања
+    // враћамо их из рез копије
+    const fs::path backupDir = backupDirFor(buildDir);
+    const int recovered = recoverBackup(backupDir, root);
+    if (recovered > 0) {
+        std::cout << "Враћено " << recovered << " фајлова из резервне копије прекинутог рада.\n";
+    }
+
+
     ensureConfigured(runner, buildDir, root);
 
     std::cout << "Провјера оригиналног кода...\n";
@@ -125,6 +134,11 @@ int runTool(int argc, char* argv[]) {
     }
     // Снимак оргиналнигх фајлова - на крају се провјерава да су сви враћени исправно
     const FileSnapshot snapshot = takeSnapshot(files);
+
+    if (!saveBackup(backupDir, root, snapshot)) {
+        std::cerr << "Не могу да направим резервну копију у " << backupDir.generic_string() << "\n";
+        return 1;
+    }
 
     std::signal(SIGINT, onInterrupt);
     const auto start = std::chrono::steady_clock::now();
@@ -152,7 +166,7 @@ int runTool(int argc, char* argv[]) {
         std::cerr << "Извјештај није написан. Провјери фајлове прије даљег рада.\n";
         return 1;
     }
-
+    removeBackup(backupDir);  // све је враћено и провјерено, копија више није потребна
     build(runner, buildDir);  // поново компајлирај оригинални код
 
     std::vector<Mutant> tested;

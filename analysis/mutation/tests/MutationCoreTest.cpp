@@ -1012,3 +1012,39 @@ TEST_F(LoadPlanTest, ReportsAllErrorsAtOnce) {
         EXPECT_NE(message.find("[M02]"), std::string::npos);
     }
 }
+
+//----Резервна копија----
+
+TEST_F(TempProjectTest, RecoverBackupRestoresFilesAfterInterruptedRun) {
+    // Arrange: оригинал се сачува, па фајл остане мутиран (као да је рад прекинут)
+    writeFile("src/a.cpp", "int x = 1;\n");
+    writeFile("src/sub/b.cpp", "int y = 1;\n");
+    const auto snapshot = takeSnapshot({root_ / "src/a.cpp", root_ / "src/sub/b.cpp"});
+    const fs::path backup = backupDirFor(root_ / "build");
+    ASSERT_TRUE(saveBackup(backup, root_, snapshot));
+    writeFile("src/a.cpp", "int x = 2;\n");
+    writeFile("src/sub/b.cpp", "int y = 2;\n");
+
+    // Act
+    const int restored = recoverBackup(backup, root_);
+
+    // Assert
+    EXPECT_EQ(restored, 2);
+    EXPECT_EQ(readFile("src/a.cpp"), "int x = 1;\n");
+    EXPECT_EQ(readFile("src/sub/b.cpp"), "int y = 1;\n");
+    EXPECT_FALSE(fs::exists(backup));
+}
+
+TEST_F(TempProjectTest, RecoverBackupWithoutBackupDoesNothing) {
+    EXPECT_EQ(recoverBackup(backupDirFor(root_ / "build"), root_), 0);
+}
+
+TEST_F(TempProjectTest, RemoveBackupDeletesBackupFolder) {
+    writeFile("src/a.cpp", "a");
+    const fs::path backup = backupDirFor(root_ / "build");
+    ASSERT_TRUE(saveBackup(backup, root_, takeSnapshot({root_ / "src/a.cpp"})));
+
+    removeBackup(backup);
+
+    EXPECT_FALSE(fs::exists(backup));
+}

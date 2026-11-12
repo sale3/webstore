@@ -474,6 +474,38 @@ std::vector<fs::path> changedFiles(const FileSnapshot& snapshot) {
     return changed;
 }
 
+// --------Резервна копија---------
+
+fs::path backupDirFor(const fs::path& buildDir) { return buildDir / "mutation_backup"; }
+
+bool saveBackup(const fs::path& backupDir, const fs::path& root, const FileSnapshot& snapshot) {
+    for (const auto& [path, content] : snapshot) {
+        const fs::path target = backupDir / fs::relative(path, root);
+        fs::create_directories(target.parent_path());
+        if (!writeBytes(target, content)) return false;
+    }
+    return true;
+}
+
+int recoverBackup(const fs::path& backupDir, const fs::path& root) {
+    if (!fs::exists(backupDir)) return 0;
+
+    int restored = 0;
+    for (const auto& entry : fs::recursive_directory_iterator(backupDir)) {
+        if (!entry.is_regular_file()) continue;
+        const fs::path relative = fs::relative(entry.path(), backupDir);
+        if (!restoreFile(root / relative, readBytes(entry.path()))) {
+            throw std::runtime_error("Не могу да вратим " + relative.generic_string() +
+                                     " из резервне копије. Копија је сачувана у " +
+                                     backupDir.generic_string());
+        }
+        ++restored;
+    }
+    fs::remove_all(backupDir);
+    return restored;
+}
+
+void removeBackup(const fs::path& backupDir) { fs::remove_all(backupDir); }
 
 // Извјештај
 
