@@ -847,23 +847,29 @@ namespace mutation
 
         std::istringstream in(readBytes(planPath));
         std::string raw;
-        while (std::getline(in, raw))
+        bool skipping = false;  // поља испод неисправног заглавља се прескачу
+        while (std::getline(in, raw)) 
         {
             const std::string line = trim(raw);
-            if (line.empty() || startsWith(line, "#"))
-                continue;
-            if (line.front() == '[')
-            {
+            if (line.empty() || startsWith(line, "#")) continue;
+            if (line.front() == '[') {
                 finish();
                 const std::size_t close = line.find(']');
-                id = close == std::string::npos ? line : line.substr(1, close - 1);
-                title = close == std::string::npos ? "" : trim(line.substr(close + 1));
+                if (close == std::string::npos) {
+                    errors << "Заглавље нема затворену заграду: " << line << "\n";
+                    id.clear();
+                    skipping = true;
+                    continue;
+                }
+                skipping = false;
+                id = line.substr(1, close - 1);
+                title = trim(line.substr(close + 1));
                 fields.clear();
                 continue;
             }
+            if (skipping) continue;
             const std::size_t colon = line.find(':');
-            if (colon == std::string::npos || id.empty())
-            {
+            if (colon == std::string::npos || id.empty()) {
                 errors << "Неисправна линија у плану: " << line << "\n";
                 continue;
             }
@@ -903,8 +909,7 @@ namespace mutation
         }
         const int nonEquivalent = static_cast<int>(mutants.size()) - equivalentCount;
         const double nonEquivalentScore =
-            nonEquivalent > 0 ? 100.0 * killedNonEquivalent / nonEquivalent : 0.0;
-            
+            nonEquivalent > 0 ? 100.0 * killedNonEquivalent / nonEquivalent : 0.0; 
         std::ostringstream r;
         r << "# Извјештај планираних мутација\n\n";
         r << "- Планираних мутација: **" << mutants.size() << "**\n";
