@@ -1,0 +1,142 @@
+// Јавни дио алата за мутационо тестирање: структуре и функције
+// које користе и mutation_tester (main) и тестови алата.
+#pragma once
+
+#include <atomic>
+#include <cstddef>
+#include <filesystem>
+#include <string>
+#include <utility>
+#include <vector>
+
+namespace mutation {
+
+namespace fs = std::filesystem;
+
+// Структура МУТАНТ
+struct Mutant {
+    int id = 0;
+    std::string file;          // нпр src/Cart.cpp
+    int line = 0;              // број линије (од 1)
+    std::string op;            // скраћеница оператора (ROR, AOR, ...)
+    std::string description;   // опис измјене
+    std::string original;      // оригинална линија (без увлачења)
+    std::string mutatedLine;   // цијела измијењена линија (са увлачењем)
+    std::string status = "непокренут";  //непокренут, убијен, преживио
+    std::string killedBy;      // први тест који је пао
+    std::string expected;      // само за планиране мутације: killed или equivalent
+};
+
+/*
+Могући статуси:
+- непокренут 
+- не компајлира се
+- убијен
+- убијен timeout - тестови трајали дуже од 30с 
+- преживио
+*/
+
+
+// једна могућа измјена једне линије 
+struct LineMutation {
+    std::string op;
+    std::string description;
+    std::string newLine;
+};
+
+struct Score {
+    int killed = 0;
+    int survived = 0;
+    double percent = 0.0;
+};
+
+// Постаје true кад корисник притисне Ctrl+C.
+extern std::atomic<bool> g_interrupted;
+void onInterrupt(int);
+
+// ---------- Помоћне функције за текст и фајлове ----------
+std::string readBytes(const fs::path& path);
+bool writeBytes(const fs::path& path, const std::string& content);
+std::vector<std::string> splitKeepEndings(const std::string& text);
+std::string lineEnding(const std::string& line);
+std::string withoutEnding(const std::string& line);
+std::string trim(const std::string& s);
+std::string indentOf(const std::string& line);
+bool startsWith(const std::string& s, const std::string& prefix);
+std::vector<std::pair<std::size_t, std::size_t>> literalRanges(const std::string& code);
+bool insideLiteral(const std::vector<std::pair<std::size_t, std::size_t>>& ranges,
+                   std::size_t pos);
+std::string codePart(const std::string& line);
+
+// ---------- Мутациони оператори ----------
+std::vector<LineMutation> mutateLine(const std::string& line);
+std::vector<Mutant> generateMutants(const std::vector<fs::path>& files, const fs::path& root);
+
+// ---------- Компајлирање и покретање тестова ----------
+
+// Покретање спољних команди (cmake, ctest) издвојено је у интерфејс,
+// да би се у тестовима могло замијенити mock објектом.
+class CommandRunner {
+public:
+    virtual ~CommandRunner() = default;
+    // Покреће команду, излаз пише у log. Враћа статус који врати систем (0 = успјех).
+    virtual int run(const std::string& command, const fs::path& log) = 0;
+};
+
+// Права имплементација: команду покреће преко std::system.
+class SystemCommandRunner : public CommandRunner {
+public:
+    int run(const std::string& command, const fs::path& log) override;
+};
+
+std::string quote(const fs::path& path);
+bool interruptedByCtrlC(int status);
+bool runCommand(CommandRunner& runner, const std::string& command, const fs::path& log);
+bool build(CommandRunner& runner, const fs::path& buildDir);
+std::string runTests(CommandRunner& runner, const fs::path& buildDir);
+std::string firstFailedTest(const fs::path& buildDir);
+void ensureConfigured(CommandRunner& runner, const fs::path& buildDir, const fs::path& root);
+void testMutant(Mutant& mutant, const fs::path& root, const fs::path& buildDir,
+                CommandRunner& runner);
+
+// ---------- Провјера враћања фајлова ----------
+
+// Враћа садржај фајла у `original` и врши провјеру да ли је добро враћено
+bool restoreFile(const fs::path& path, const std::string& original);
+
+// снепшот фајла прије мутација (путања, садржај)
+using FileSnapshot = std::vector<std::pair<fs::path, std::string>>;
+FileSnapshot takeSnapshot(const std::vector<fs::path>& files);
+
+// фајлови из снепшота који се разликују, ако је празно то значи да је коректно враћен оригинал
+std::vector<fs::path> changedFiles(const FileSnapshot& snapshot);
+
+// ---------- Резервна копија (за случај прекида рада нпр искључење рачунара, прекид напајања) ----------
+
+// Фолдер у којем се чувају оригинали прије мутирања
+fs::path backupDirFor(const fs::path& buildDir);
+
+// Упише снимак у резервни фолдер (путања је у односу на root)
+bool saveBackup(const fs::path& backupDir, const fs::path& root, const FileSnapshot& snapshot);
+
+// Ако постоји резервна копија од прекинутог рада, врати фајлове из ње и обриши је
+// Враћа број враћених фајлова, баца грешку ако неки фајл не може да се врати
+// тада копија остаје да би се рад могао поново покренути.
+int recoverBackup(const fs::path& backupDir, const fs::path& root);
+
+// Брише резервну копију (ако је успјешно враћена та верзија)
+void removeBackup(const fs::path& backupDir);
+
+// ---------- Извјештај ----------
+bool isKilled(const Mutant& m);
+Score score(const std::vector<const Mutant*>& mutants);
+std::string percent(double value);
+std::string cell(const std::string& text);
+std::string createReport(const std::vector<Mutant>& mutants);
+
+// ---------- Планиране мутације (--plan) ----------
+// Баца std::runtime_error ако фајл не постоји или план има грешке.
+std::vector<Mutant> loadPlan(const fs::path& planPath, const fs::path& root);
+std::string createPlanReport(const std::vector<Mutant>& mutants);
+
+}  // namespace mutation
