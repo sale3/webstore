@@ -20,11 +20,14 @@ using namespace mutation;
 //----trim----
 
 // tuple<ulaz, ocekivano>
-class TrimTest : public ::testing::TestWithParam<std::tuple<std::string, std::string>> {};
+class TrimTest : public ::testing::TestWithParam<std::tuple<std::string, std::string>>
+{
+};
 
-TEST_P(TrimTest, RemovesWhitespaceFromBothEnds) {
+TEST_P(TrimTest, RemovesWhitespaceFromBothEnds)
+{
     // Arrange
-    const auto& [input, expected] = GetParam();
+    const auto &[input, expected] = GetParam();
 
     // Act
     const std::string result = trim(input);
@@ -41,13 +44,12 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_tuple("\tx = 1;\r\n", "x = 1;"),
         std::make_tuple("bez razmaka", "bez razmaka"),
         std::make_tuple("   \t ", ""),
-        std::make_tuple("", "")
-    )
-);
+        std::make_tuple("", "")));
 
 //----Krajevi redova----
 
-TEST(SplitKeepEndingsTest, KeepsCrlfAndLfEndings) {
+TEST(SplitKeepEndingsTest, KeepsCrlfAndLfEndings)
+{
     // Act
     const auto lines = splitKeepEndings("a\r\nb\nc");
 
@@ -58,7 +60,8 @@ TEST(SplitKeepEndingsTest, KeepsCrlfAndLfEndings) {
     EXPECT_EQ(lines[2], "c");
 }
 
-TEST(SplitKeepEndingsTest, TextEndingWithNewlineHasNoEmptyLastLine) {
+TEST(SplitKeepEndingsTest, TextEndingWithNewlineHasNoEmptyLastLine)
+{
     // Act
     const auto lines = splitKeepEndings("a\nb\n");
 
@@ -67,28 +70,34 @@ TEST(SplitKeepEndingsTest, TextEndingWithNewlineHasNoEmptyLastLine) {
     EXPECT_EQ(lines[1], "b\n");
 }
 
-TEST(SplitKeepEndingsTest, EmptyTextGivesNoLines) {
+TEST(SplitKeepEndingsTest, EmptyTextGivesNoLines)
+{
     EXPECT_TRUE(splitKeepEndings("").empty());
 }
 
-TEST(SplitKeepEndingsTest, JoiningLinesGivesOriginalText) {
+TEST(SplitKeepEndingsTest, JoiningLinesGivesOriginalText)
+{
     // Arrange
     const std::string text = "x = 1;\r\ny = 2;\nz = 3;";
 
     // Act
     std::string joined;
-    for (const auto& line : splitKeepEndings(text)) joined += line;
+    for (const auto &line : splitKeepEndings(text))
+        joined += line;
 
     // Assert
     EXPECT_EQ(joined, text);
 }
 
 // tuple<linija, kraj reda, linija bez kraja>
-class LineEndingTest : public ::testing::TestWithParam<std::tuple<std::string, std::string, std::string>> {};
+class LineEndingTest : public ::testing::TestWithParam<std::tuple<std::string, std::string, std::string>>
+{
+};
 
-TEST_P(LineEndingTest, RecognizesAndRemovesEnding) {
+TEST_P(LineEndingTest, RecognizesAndRemovesEnding)
+{
     // Arrange
-    const auto& [line, ending, withoutIt] = GetParam();
+    const auto &[line, ending, withoutIt] = GetParam();
 
     // Act & Assert
     EXPECT_EQ(lineEnding(line), ending);
@@ -102,19 +111,19 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_tuple("a\r\n", "\r\n", "a"),
         std::make_tuple("a\n", "\n", "a"),
         std::make_tuple("a", "", "a"),
-        std::make_tuple("", "", "")
-    )
-);
+        std::make_tuple("", "", "")));
 
 //----Ostale pomocne funkcije----
 
-TEST(IndentOfTest, ReturnsLeadingSpacesAndTabs) {
+TEST(IndentOfTest, ReturnsLeadingSpacesAndTabs)
+{
     EXPECT_EQ(indentOf("    x = 1;"), "    ");
     EXPECT_EQ(indentOf("\t\tx"), "\t\t");
     EXPECT_EQ(indentOf("x"), "");
 }
 
-TEST(StartsWithTest, ChecksPrefix) {
+TEST(StartsWithTest, ChecksPrefix)
+{
     EXPECT_TRUE(startsWith("return x;", "return"));
     EXPECT_FALSE(startsWith("x = return;", "return"));
     EXPECT_FALSE(startsWith("ret", "return"));
@@ -122,7 +131,8 @@ TEST(StartsWithTest, ChecksPrefix) {
 
 //----Literali i komentari----
 
-TEST(LiteralRangesTest, FindsStringAndCharLiterals) {
+TEST(LiteralRangesTest, FindsStringAndCharLiterals)
+{
     // Act
     const auto ranges = literalRanges("a(\"x\", 'y');");
 
@@ -132,7 +142,8 @@ TEST(LiteralRangesTest, FindsStringAndCharLiterals) {
     EXPECT_EQ(ranges[1], std::make_pair(std::size_t{7}, std::size_t{9}));
 }
 
-TEST(LiteralRangesTest, SkipsEscapedQuoteInsideString) {
+TEST(LiteralRangesTest, SkipsEscapedQuoteInsideString)
+{
     // Act
     const auto ranges = literalRanges(R"(s = "a\"b";)");
 
@@ -142,22 +153,26 @@ TEST(LiteralRangesTest, SkipsEscapedQuoteInsideString) {
     EXPECT_EQ(ranges[0].second, 9u);
 }
 
-TEST(InsideLiteralTest, ChecksPositionAgainstRanges) {
+TEST(InsideLiteralTest, ChecksPositionAgainstRanges)
+{
     // Arrange
     const auto ranges = literalRanges("x = \"<=\";");
 
     // Act & Assert
     EXPECT_TRUE(insideLiteral(ranges, 5));
-    EXPECT_FALSE(insideLiteral(ranges, 0));   // prije literala
-    EXPECT_FALSE(insideLiteral(ranges, 8));   // poslije literala
+    EXPECT_FALSE(insideLiteral(ranges, 0)); // prije literala
+    EXPECT_FALSE(insideLiteral(ranges, 8)); // poslije literala
 }
 
 // tuple<linija, kod bez komentara>
-class CodePartTest : public ::testing::TestWithParam<std::tuple<std::string, std::string>> {};
+class CodePartTest : public ::testing::TestWithParam<std::tuple<std::string, std::string>>
+{
+};
 
-TEST_P(CodePartTest, ReturnsCodeBeforeLineComment) {
+TEST_P(CodePartTest, ReturnsCodeBeforeLineComment)
+{
     // Arrange
-    const auto& [line, expected] = GetParam();
+    const auto &[line, expected] = GetParam();
 
     // Act & Assert
     EXPECT_EQ(codePart(line), expected);
@@ -170,9 +185,7 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_tuple("x = 1; // komentar", "x = 1; "),
         std::make_tuple("s = \"http://a\";", "s = \"http://a\";"),
         std::make_tuple("x = 1;", "x = 1;"),
-        std::make_tuple("// cijeli komentar", "")
-    )
-);
+        std::make_tuple("// cijeli komentar", "")));
 
 //========================================================================
 // 2. Pomocne funkcije za komande (bez pokretanja)
@@ -180,11 +193,13 @@ INSTANTIATE_TEST_SUITE_P(
 
 //----Pomocne funkcije----
 
-TEST(QuoteTest, WrapsPathInQuotesWithForwardSlashes) {
+TEST(QuoteTest, WrapsPathInQuotesWithForwardSlashes)
+{
     EXPECT_EQ(quote(fs::path("build") / "debug"), "\"build/debug\"");
 }
 
-TEST(OnInterruptTest, SetsInterruptedFlag) {
+TEST(OnInterruptTest, SetsInterruptedFlag)
+{
     // Arrange
     g_interrupted = false;
 
@@ -197,11 +212,14 @@ TEST(OnInterruptTest, SetsInterruptedFlag) {
 }
 
 // tuple<status komande, da li je prekinuta sa Ctrl+C>
-class InterruptedByCtrlCTest : public ::testing::TestWithParam<std::tuple<int, bool>> {};
+class InterruptedByCtrlCTest : public ::testing::TestWithParam<std::tuple<int, bool>>
+{
+};
 
-TEST_P(InterruptedByCtrlCTest, RecognizesCtrlCStatus) {
+TEST_P(InterruptedByCtrlCTest, RecognizesCtrlCStatus)
+{
     // Arrange
-    const auto& [status, expected] = GetParam();
+    const auto &[status, expected] = GetParam();
 
     // Act & Assert
     EXPECT_EQ(interruptedByCtrlC(status), expected);
@@ -212,42 +230,42 @@ INSTANTIATE_TEST_SUITE_P(
     Statuses,
     InterruptedByCtrlCTest,
     ::testing::Values(
-        std::make_tuple(static_cast<int>(0xC000013Au), true),  // STATUS_CONTROL_C_EXIT
+        std::make_tuple(static_cast<int>(0xC000013Au), true), // STATUS_CONTROL_C_EXIT
         std::make_tuple(0, false),
-        std::make_tuple(1, false)
-    )
-);
+        std::make_tuple(1, false)));
 #else
 INSTANTIATE_TEST_SUITE_P(
     Statuses,
     InterruptedByCtrlCTest,
     ::testing::Values(
-        std::make_tuple(130 << 8, true),   // komanda zavrsila sa kodom 130
-        std::make_tuple(SIGINT, true),     // komanda ubijena signalom SIGINT
-        std::make_tuple(SIGTERM, false),   // ubijena drugim signalom
-        std::make_tuple(1 << 8, false),    // zavrsila sa kodom 1
-        std::make_tuple(0, false)          // uspjeh
-    )
-);
+        std::make_tuple(130 << 8, true), // komanda zavrsila sa kodom 130
+        std::make_tuple(SIGINT, true),   // komanda ubijena signalom SIGINT
+        std::make_tuple(SIGTERM, false), // ubijena drugim signalom
+        std::make_tuple(1 << 8, false),  // zavrsila sa kodom 1
+        std::make_tuple(0, false)        // uspjeh
+        ));
 #endif
 
 //========================================================================
 // 3. Pravljenje mutanata iz jedne linije
 //========================================================================
 
-class MutateLineTest : public ::testing::Test {
+class MutateLineTest : public ::testing::Test
+{
 protected:
     // Da li medju mutantima postoji mutant datog operatora sa datom linijom
-    static bool hasMutant(const std::vector<LineMutation>& mutants,
-                          const std::string& op, const std::string& newLine) {
-        return std::any_of(mutants.begin(), mutants.end(), [&](const LineMutation& m) {
-            return m.op == op && m.newLine == newLine;
-        });
+    static bool hasMutant(const std::vector<LineMutation> &mutants,
+                          const std::string &op, const std::string &newLine)
+    {
+        return std::any_of(mutants.begin(), mutants.end(), [&](const LineMutation &m)
+                           { return m.op == op && m.newLine == newLine; });
     }
 
-    static bool hasOperator(const std::vector<LineMutation>& mutants, const std::string& op) {
+    static bool hasOperator(const std::vector<LineMutation> &mutants, const std::string &op)
+    {
         return std::any_of(mutants.begin(), mutants.end(),
-                           [&](const LineMutation& m) { return m.op == op; });
+                           [&](const LineMutation &m)
+                           { return m.op == op; });
     }
 };
 
@@ -256,11 +274,14 @@ protected:
 // tuple<linija, operator, ocekivani mutant>
 class MutateLineOperatorTest
     : public MutateLineTest,
-      public ::testing::WithParamInterface<std::tuple<std::string, std::string, std::string>> {};
+      public ::testing::WithParamInterface<std::tuple<std::string, std::string, std::string>>
+{
+};
 
-TEST_P(MutateLineOperatorTest, ProducesExpectedMutant) {
+TEST_P(MutateLineOperatorTest, ProducesExpectedMutant)
+{
     // Arrange
-    const auto& [line, op, expected] = GetParam();
+    const auto &[line, op, expected] = GetParam();
 
     // Act
     const auto mutants = mutateLine(line);
@@ -304,11 +325,10 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_tuple("    d = 5.0;", "CRP", "    d = 6.0;"),
         // SDL - brisanje naredbe
         std::make_tuple("    items_.clear();", "SDL", "    /* MUTANT: items_.clear(); */"),
-        std::make_tuple("    x = 5;", "SDL", "    /* MUTANT: x = 5; */")
-    )
-);
+        std::make_tuple("    x = 5;", "SDL", "    /* MUTANT: x = 5; */")));
 
-TEST_F(MutateLineTest, CommentAfterCodeIsKeptInMutant) {
+TEST_F(MutateLineTest, CommentAfterCodeIsKeptInMutant)
+{
     // Act
     const auto mutants = mutateLine("    x = a + b;  // zbir");
 
@@ -316,7 +336,8 @@ TEST_F(MutateLineTest, CommentAfterCodeIsKeptInMutant) {
     EXPECT_TRUE(hasMutant(mutants, "AOR", "    x = a - b;  // zbir"));
 }
 
-TEST_F(MutateLineTest, EveryOccurrenceGetsItsOwnMutant) {
+TEST_F(MutateLineTest, EveryOccurrenceGetsItsOwnMutant)
+{
     // Act
     const auto mutants = mutateLine("    if (a <= b && c <= d) {");
 
@@ -329,9 +350,12 @@ TEST_F(MutateLineTest, EveryOccurrenceGetsItsOwnMutant) {
 
 class MutateLineIgnoredTest
     : public MutateLineTest,
-      public ::testing::WithParamInterface<std::string> {};
+      public ::testing::WithParamInterface<std::string>
+{
+};
 
-TEST_P(MutateLineIgnoredTest, ProducesNoMutants) {
+TEST_P(MutateLineIgnoredTest, ProducesNoMutants)
+{
     // Arrange
     const std::string line = GetParam();
 
@@ -349,20 +373,21 @@ INSTANTIATE_TEST_SUITE_P(
         "#include <vector>",
         "    /* x <= 0 */",
         "     * x <= 0",
-        "}"
-    )
-);
+        "}"));
 
 //----Sta alat NE smije mutirati----
 
 // tuple<linija, operator koji se ne smije pojaviti>
 class MutateLineForbiddenTest
     : public MutateLineTest,
-      public ::testing::WithParamInterface<std::tuple<std::string, std::string>> {};
+      public ::testing::WithParamInterface<std::tuple<std::string, std::string>>
+{
+};
 
-TEST_P(MutateLineForbiddenTest, DoesNotProduceOperator) {
+TEST_P(MutateLineForbiddenTest, DoesNotProduceOperator)
+{
     // Arrange
-    const auto& [line, op] = GetParam();
+    const auto &[line, op] = GetParam();
 
     // Act
     const auto mutants = mutateLine(line);
@@ -375,28 +400,27 @@ INSTANTIATE_TEST_SUITE_P(
     ForbiddenMutations,
     MutateLineForbiddenTest,
     ::testing::Values(
-        std::make_tuple("    log(\"a <= b\");", "ROR"),          // unutar stringa
-        std::make_tuple("    c = '+';", "AOR"),                  // unutar char literala
-        std::make_tuple("    x = 1;  // a <= b", "ROR"),          // u komentaru
-        std::make_tuple("    std::vector<int> v;", "ROR"),        // sablon
-        std::make_tuple("    it->second;", "ROR"),                // pokazivac
-        std::make_tuple("    x <<= 1;", "ROR"),                   // <<= nije poredjenje
-        std::make_tuple("    auto c = a <=> b;", "ROR"),          // <=> nije <=
-        std::make_tuple("    x >>= 1;", "ROR"),                   // >>= nije poredjenje
-        std::make_tuple("    x = -1;", "AOR"),                    // unarni minus
-        std::make_tuple("    if (a != b) {", "UOD"),              // ! u !=
-        std::make_tuple("    bool trueValue = x;", "BCR"),        // true u imenu
-        std::make_tuple("    bool istrue = x;", "BCR"),           // true na kraju imena
-        std::make_tuple("    return result;", "SDL"),             // return se ne brise
+        std::make_tuple("    log(\"a <= b\");", "ROR"),    // unutar stringa
+        std::make_tuple("    c = '+';", "AOR"),            // unutar char literala
+        std::make_tuple("    x = 1;  // a <= b", "ROR"),   // u komentaru
+        std::make_tuple("    std::vector<int> v;", "ROR"), // sablon
+        std::make_tuple("    it->second;", "ROR"),         // pokazivac
+        std::make_tuple("    x <<= 1;", "ROR"),            // <<= nije poredjenje
+        std::make_tuple("    auto c = a <=> b;", "ROR"),   // <=> nije <=
+        std::make_tuple("    x >>= 1;", "ROR"),            // >>= nije poredjenje
+        std::make_tuple("    x = -1;", "AOR"),             // unarni minus
+        std::make_tuple("    if (a != b) {", "UOD"),       // ! u !=
+        std::make_tuple("    bool trueValue = x;", "BCR"), // true u imenu
+        std::make_tuple("    bool istrue = x;", "BCR"),    // true na kraju imena
+        std::make_tuple("    return result;", "SDL"),      // return se ne brise
         std::make_tuple("    throw std::invalid_argument(\"x\");", "SDL"),
-        std::make_tuple("    int x = 5;", "SDL"),                 // deklaracija se ne brise
-        std::make_tuple("    utf8Helper();", "CRP"),              // broj u imenu
-        std::make_tuple("    x = 1.0f;", "CRP"),                  // broj sa sufiksom
-        std::make_tuple("    x = 10u;", "CRP"),                   // broj sa sufiksom
-        std::make_tuple("    x = 12345678901;", "CRP"),           // prevelik broj
-        std::make_tuple("    x = obj.5;", "CRP")                  // broj poslije tacke
-    )
-);
+        std::make_tuple("    int x = 5;", "SDL"),       // deklaracija se ne brise
+        std::make_tuple("    utf8Helper();", "CRP"),    // broj u imenu
+        std::make_tuple("    x = 1.0f;", "CRP"),        // broj sa sufiksom
+        std::make_tuple("    x = 10u;", "CRP"),         // broj sa sufiksom
+        std::make_tuple("    x = 12345678901;", "CRP"), // prevelik broj
+        std::make_tuple("    x = obj.5;", "CRP")        // broj poslije tacke
+        ));
 
 //----Granicni slucajevi: operator na pocetku ili na kraju linije----
 
@@ -404,44 +428,45 @@ INSTANTIATE_TEST_SUITE_P(
     LineEdges,
     MutateLineOperatorTest,
     ::testing::Values(
-        std::make_tuple("==b", "ROR", "!=b"),              // operator na pocetku
-        std::make_tuple("a <=", "ROR", "a <"),             // operator na kraju
-        std::make_tuple("!ok", "UOD", "ok"),               // ! na pocetku
-        std::make_tuple("x !", "UOD", "x "),               // ! na kraju
-        std::make_tuple("true;", "BCR", "false;"),         // true na pocetku
-        std::make_tuple("x = true", "BCR", "x = false"),   // true na kraju
-        std::make_tuple("5;", "CRP", "6;"),                // broj na pocetku
-        std::make_tuple("x = 5", "CRP", "x = 6"),          // broj na kraju
-        std::make_tuple("x = 5.0", "CRP", "x = 6.0")       // decimalni broj na kraju
-    )
-);
+        std::make_tuple("==b", "ROR", "!=b"),            // operator na pocetku
+        std::make_tuple("a <=", "ROR", "a <"),           // operator na kraju
+        std::make_tuple("!ok", "UOD", "ok"),             // ! na pocetku
+        std::make_tuple("x !", "UOD", "x "),             // ! na kraju
+        std::make_tuple("true;", "BCR", "false;"),       // true na pocetku
+        std::make_tuple("x = true", "BCR", "x = false"), // true na kraju
+        std::make_tuple("5;", "CRP", "6;"),              // broj na pocetku
+        std::make_tuple("x = 5", "CRP", "x = 6"),        // broj na kraju
+        std::make_tuple("x = 5.0", "CRP", "x = 6.0")     // decimalni broj na kraju
+        ));
 
 INSTANTIATE_TEST_SUITE_P(
     LineEdges,
     MutateLineForbiddenTest,
     ::testing::Values(
-        std::make_tuple("+ b", "AOR"),                      // nema razmaka ispred
-        std::make_tuple("a +", "AOR"),                      // nema razmaka iza
-        std::make_tuple("    if (a<!b) {", "UOD"),          // ! iza <
-        std::make_tuple("    if (a>!b) {", "UOD"),          // ! iza >
-        std::make_tuple("    bool true_flag = x;", "BCR"),  // _ je dio imena
-        std::make_tuple("    x = utf8", "CRP"),             // ime na kraju linije
-        std::make_tuple("    x = 5.", "CRP"),               // tacka bez decimala
-        std::make_tuple("    x = 5.f;", "CRP"),             // tacka pa slovo
-        std::make_tuple("    x = \"a <= b", "ROR")          // nezatvoren string
-    )
-);
+        std::make_tuple("+ b", "AOR"),                     // nema razmaka ispred
+        std::make_tuple("a +", "AOR"),                     // nema razmaka iza
+        std::make_tuple("    if (a<!b) {", "UOD"),         // ! iza <
+        std::make_tuple("    if (a>!b) {", "UOD"),         // ! iza >
+        std::make_tuple("    bool true_flag = x;", "BCR"), // _ je dio imena
+        std::make_tuple("    x = utf8", "CRP"),            // ime na kraju linije
+        std::make_tuple("    x = 5.", "CRP"),              // tacka bez decimala
+        std::make_tuple("    x = 5.f;", "CRP"),            // tacka pa slovo
+        std::make_tuple("    x = \"a <= b", "ROR")         // nezatvoren string
+        ));
 
 //----Konkretan mutant koji ne smije nastati----
 
 // tuple<linija, operator, mutant koji se ne smije pojaviti>
 class MutateLineNotProducedTest
     : public MutateLineTest,
-      public ::testing::WithParamInterface<std::tuple<std::string, std::string, std::string>> {};
+      public ::testing::WithParamInterface<std::tuple<std::string, std::string, std::string>>
+{
+};
 
-TEST_P(MutateLineNotProducedTest, DoesNotProduceMutant) {
+TEST_P(MutateLineNotProducedTest, DoesNotProduceMutant)
+{
     // Arrange
-    const auto& [line, op, notExpected] = GetParam();
+    const auto &[line, op, notExpected] = GetParam();
 
     // Act
     const auto mutants = mutateLine(line);
@@ -457,11 +482,10 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_tuple("    if (a === b) {", "ROR", "    if (a =!= b) {"),
         std::make_tuple("    if (a !== b) {", "ROR", "    if (a !!= b) {"),
         std::make_tuple("    if (a <== b) {", "ROR", "    if (a <!= b) {"),
-        std::make_tuple("    if (a >== b) {", "ROR", "    if (a >!= b) {")
-    )
-);
+        std::make_tuple("    if (a >== b) {", "ROR", "    if (a >!= b) {")));
 
-TEST_F(MutateLineTest, NegationAfterAssignmentIsNotRemoved) {
+TEST_F(MutateLineTest, NegationAfterAssignmentIsNotRemoved)
+{
     // Act
     const auto mutants = mutateLine("    x =!ok;");
 
@@ -469,14 +493,16 @@ TEST_F(MutateLineTest, NegationAfterAssignmentIsNotRemoved) {
     EXPECT_FALSE(hasOperator(mutants, "UOD"));
 }
 
-TEST_F(MutateLineTest, DoubleNegationKeepsSecondNegation) {
+TEST_F(MutateLineTest, DoubleNegationKeepsSecondNegation)
+{
     // Act
     const auto mutants = mutateLine("    if (!!ok) {");
 
     // Assert: uklanja se samo prvi !, drugi stoji iza ! i preskace se
     EXPECT_TRUE(hasMutant(mutants, "UOD", "    if (!ok) {"));
     EXPECT_EQ(std::count_if(mutants.begin(), mutants.end(),
-                            [](const LineMutation& m) { return m.op == "UOD"; }),
+                            [](const LineMutation &m)
+                            { return m.op == "UOD"; }),
               1);
 }
 
@@ -484,36 +510,42 @@ TEST_F(MutateLineTest, DoubleNegationKeepsSecondNegation) {
 // 4. Skor i izvjestaji
 //========================================================================
 
-namespace {
+namespace
+{
 
-Mutant makeMutant(int id, const std::string& file, int line, const std::string& op,
-                  const std::string& status, const std::string& mutatedLine = "x < 0") {
-    Mutant m;
-    m.id = id;
-    m.file = file;
-    m.line = line;
-    m.op = op;
-    m.description = "opis";
-    m.original = "x <= 0";
-    m.mutatedLine = mutatedLine;
-    m.status = status;
-    return m;
-}
+    Mutant makeMutant(int id, const std::string &file, int line, const std::string &op,
+                      const std::string &status, const std::string &mutatedLine = "x < 0")
+    {
+        Mutant m;
+        m.id = id;
+        m.file = file;
+        m.line = line;
+        m.op = op;
+        m.description = "opis";
+        m.original = "x <= 0";
+        m.mutatedLine = mutatedLine;
+        m.status = status;
+        return m;
+    }
 
-bool contains(const std::string& text, const std::string& part) {
-    return text.find(part) != std::string::npos;
-}
+    bool contains(const std::string &text, const std::string &part)
+    {
+        return text.find(part) != std::string::npos;
+    }
 
-}  // namespace
+} // namespace
 
 //----Status i skor----
 
 // tuple<status, da li je ubijen>
-class IsKilledTest : public ::testing::TestWithParam<std::tuple<std::string, bool>> {};
+class IsKilledTest : public ::testing::TestWithParam<std::tuple<std::string, bool>>
+{
+};
 
-TEST_P(IsKilledTest, RecognizesKilledStatus) {
+TEST_P(IsKilledTest, RecognizesKilledStatus)
+{
     // Arrange
-    const auto& [status, expected] = GetParam();
+    const auto &[status, expected] = GetParam();
     Mutant m;
     m.status = status;
 
@@ -529,11 +561,10 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_tuple("убијен (timeout)", true),
         std::make_tuple("преживио", false),
         std::make_tuple("не компајлира се", false),
-        std::make_tuple("непокренут", false)
-    )
-);
+        std::make_tuple("непокренут", false)));
 
-class ScoreTest : public ::testing::Test {
+class ScoreTest : public ::testing::Test
+{
 protected:
     Mutant killed_ = makeMutant(1, "src/A.cpp", 1, "ROR", "убијен");
     Mutant timeout_ = makeMutant(2, "src/A.cpp", 2, "ROR", "убијен (timeout)");
@@ -541,7 +572,8 @@ protected:
     Mutant notCompiled_ = makeMutant(4, "src/A.cpp", 4, "ROR", "не компајлира се");
 };
 
-TEST_F(ScoreTest, CountsKilledAndSurvived) {
+TEST_F(ScoreTest, CountsKilledAndSurvived)
+{
     // Act
     const Score s = score({&killed_, &timeout_, &survived_});
 
@@ -551,7 +583,8 @@ TEST_F(ScoreTest, CountsKilledAndSurvived) {
     EXPECT_NEAR(s.percent, 66.67, 0.01);
 }
 
-TEST_F(ScoreTest, IgnoresMutantsThatDoNotCompile) {
+TEST_F(ScoreTest, IgnoresMutantsThatDoNotCompile)
+{
     // Act
     const Score s = score({&killed_, &notCompiled_});
 
@@ -561,7 +594,8 @@ TEST_F(ScoreTest, IgnoresMutantsThatDoNotCompile) {
     EXPECT_DOUBLE_EQ(s.percent, 100.0);
 }
 
-TEST_F(ScoreTest, EmptyListGivesZero) {
+TEST_F(ScoreTest, EmptyListGivesZero)
+{
     // Act
     const Score s = score({});
 
@@ -573,11 +607,14 @@ TEST_F(ScoreTest, EmptyListGivesZero) {
 //----Formatiranje----
 
 // tuple<vrijednost, tekst>
-class PercentTest : public ::testing::TestWithParam<std::tuple<double, std::string>> {};
+class PercentTest : public ::testing::TestWithParam<std::tuple<double, std::string>>
+{
+};
 
-TEST_P(PercentTest, FormatsWithOneDecimal) {
+TEST_P(PercentTest, FormatsWithOneDecimal)
+{
     // Arrange
-    const auto& [value, expected] = GetParam();
+    const auto &[value, expected] = GetParam();
 
     // Act & Assert
     EXPECT_EQ(percent(value), expected);
@@ -589,21 +626,22 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Values(
         std::make_tuple(100.0, "100.0%"),
         std::make_tuple(95.25, "95.2%"),
-        std::make_tuple(0.0, "0.0%")
-    )
-);
+        std::make_tuple(0.0, "0.0%")));
 
-TEST(CellTest, EscapesPipeCharacter) {
+TEST(CellTest, EscapesPipeCharacter)
+{
     EXPECT_EQ(cell("a || b"), "a \\|\\| b");
 }
 
-TEST(CellTest, LeavesTextWithoutPipeUnchanged) {
+TEST(CellTest, LeavesTextWithoutPipeUnchanged)
+{
     EXPECT_EQ(cell("x <= 0"), "x <= 0");
 }
 
 //----Izvjestaj automatskog rezima----
 
-class CreateReportTest : public ::testing::Test {
+class CreateReportTest : public ::testing::Test
+{
 protected:
     std::vector<Mutant> mutants_ = {
         makeMutant(1, "src/Cart.cpp", 11, "ROR", "убијен"),
@@ -612,7 +650,8 @@ protected:
     };
 };
 
-TEST_F(CreateReportTest, ContainsSummary) {
+TEST_F(CreateReportTest, ContainsSummary)
+{
     // Act
     const std::string report = createReport(mutants_);
 
@@ -624,7 +663,8 @@ TEST_F(CreateReportTest, ContainsSummary) {
     EXPECT_TRUE(contains(report, "Мутациони скор: **50.0%**"));
 }
 
-TEST_F(CreateReportTest, ContainsTablesPerFileAndOperator) {
+TEST_F(CreateReportTest, ContainsTablesPerFileAndOperator)
+{
     // Act
     const std::string report = createReport(mutants_);
 
@@ -634,7 +674,8 @@ TEST_F(CreateReportTest, ContainsTablesPerFileAndOperator) {
     EXPECT_TRUE(contains(report, "| ROR | 2 | 1 | 0 | 100.0% |"));
 }
 
-TEST_F(CreateReportTest, ListsSurvivingMutantWithEscapedPipes) {
+TEST_F(CreateReportTest, ListsSurvivingMutantWithEscapedPipes)
+{
     // Act
     const std::string report = createReport(mutants_);
 
@@ -643,7 +684,8 @@ TEST_F(CreateReportTest, ListsSurvivingMutantWithEscapedPipes) {
     EXPECT_TRUE(contains(report, "| 2 | src/Cart.cpp:12 | AOR (opis) | `x <= 0` | `a \\|\\| b` |"));
 }
 
-TEST_F(CreateReportTest, ShowsWhichTestKilledMutant) {
+TEST_F(CreateReportTest, ShowsWhichTestKilledMutant)
+{
     // Arrange
     mutants_[0].killedBy = "CartTest.AddsProduct";
 
@@ -654,7 +696,8 @@ TEST_F(CreateReportTest, ShowsWhichTestKilledMutant) {
     EXPECT_TRUE(contains(report, "| убијен | CartTest.AddsProduct |"));
 }
 
-TEST_F(CreateReportTest, SaysWhenNoMutantSurvived) {
+TEST_F(CreateReportTest, SaysWhenNoMutantSurvived)
+{
     // Arrange
     mutants_.erase(mutants_.begin() + 1);
 
@@ -667,23 +710,26 @@ TEST_F(CreateReportTest, SaysWhenNoMutantSurvived) {
 
 //----Izvjestaj planiranih mutacija----
 
-class CreatePlanReportTest : public ::testing::Test {
+class CreatePlanReportTest : public ::testing::Test
+{
 protected:
-    static Mutant planned(const std::string& id, const std::string& expected,
-                          const std::string& status, const std::string& mutatedLine = "x < 0") {
+    static Mutant planned(const std::string &id, const std::string &expected,
+                          const std::string &status, const std::string &mutatedLine = "x < 0")
+    {
         Mutant m = makeMutant(1, "src/Cart.cpp", 11, id, status, mutatedLine);
         m.expected = expected;
         return m;
     }
 };
 
-TEST_F(CreatePlanReportTest, CountsResultsMatchingExpectation) {
+TEST_F(CreatePlanReportTest, CountsResultsMatchingExpectation)
+{
     // Arrange
     const std::vector<Mutant> mutants = {
-        planned("M01", "killed", "убијен"),          // poklapa se
-        planned("M02", "equivalent", "преживио"),    // poklapa se
-        planned("M03", "killed", "преживио"),        // ne poklapa se
-        planned("M04", "equivalent", "убијен"),      // ne poklapa se
+        planned("M01", "killed", "убијен"),       // poklapa se
+        planned("M02", "equivalent", "преживио"), // poklapa se
+        planned("M03", "killed", "преживио"),     // ne poklapa se
+        planned("M04", "equivalent", "убијен"),   // ne poklapa se
     };
 
     // Act
@@ -692,14 +738,30 @@ TEST_F(CreatePlanReportTest, CountsResultsMatchingExpectation) {
     // Assert
     EXPECT_TRUE(contains(report, "Планираних мутација: **4**"));
     EXPECT_TRUE(contains(report, "Резултат као што је очекивано: **2 / 4**"));
-    EXPECT_TRUE(contains(report, "Скор без еквивалентних мутаната: **100.0%**"));
+    EXPECT_TRUE(contains(report, "Скор без еквивалентних мутаната: **50.0%**"));
     EXPECT_TRUE(contains(report, "| убијен | убијен ✓ |"));
     EXPECT_TRUE(contains(report, "| еквивалентан | преживио ✓ |"));
     EXPECT_TRUE(contains(report, "| убијен | преживио ✗ |"));
     EXPECT_TRUE(contains(report, "| еквивалентан | убијен ✗ |"));
 }
 
-TEST_F(CreatePlanReportTest, ShowsDeletedLineAsDeleted) {
+TEST_F(CreatePlanReportTest, UnexpectedlyKilledEquivalentDoesNotRaiseScoreAbove100)
+{
+    // Arrange: jedan očekivano ubijen, a ekvivalentni mutant je ubijen (neočekivano)
+    const std::vector<Mutant> mutants = {
+        planned("M01", "killed", "преживио"),
+        planned("M02", "equivalent", "убијен"),
+    };
+
+    // Act
+    const std::string report = createPlanReport(mutants);
+
+    // Assert
+    EXPECT_TRUE(contains(report, "Скор без еквивалентних мутаната: **0.0%**"));
+}
+
+TEST_F(CreatePlanReportTest, ShowsDeletedLineAsDeleted)
+{
     // Arrange
     const std::vector<Mutant> mutants = {planned("M01", "killed", "убијен", "   ")};
 
@@ -710,7 +772,8 @@ TEST_F(CreatePlanReportTest, ShowsDeletedLineAsDeleted) {
     EXPECT_TRUE(contains(report, "*(обрисано)*"));
 }
 
-TEST_F(CreatePlanReportTest, ScoreWithoutEquivalentsIsZeroWhenAllAreEquivalent) {
+TEST_F(CreatePlanReportTest, ScoreWithoutEquivalentsIsZeroWhenAllAreEquivalent)
+{
     // Arrange
     const std::vector<Mutant> mutants = {planned("M01", "equivalent", "преживио")};
 
@@ -727,9 +790,10 @@ TEST_F(CreatePlanReportTest, ScoreWithoutEquivalentsIsZeroWhenAllAreEquivalent) 
 
 //----Citanje i pisanje fajlova----
 
-TEST_F(TempProjectTest, WriteAndReadKeepBytesUnchanged) {
+TEST_F(TempProjectTest, WriteAndReadKeepBytesUnchanged)
+{
     // Arrange
-    const std::string content("a\r\nb\n\0d", 7);  // CRLF, LF i nula bajt
+    const std::string content("a\r\nb\n\0d", 7); // CRLF, LF i nula bajt
 
     // Act
     writeFile("src/x.txt", content);
@@ -738,20 +802,21 @@ TEST_F(TempProjectTest, WriteAndReadKeepBytesUnchanged) {
     EXPECT_EQ(readFile("src/x.txt"), content);
 }
 
-TEST_F(TempProjectTest, ReadingMissingFileGivesEmptyText) {
+TEST_F(TempProjectTest, ReadingMissingFileGivesEmptyText)
+{
     EXPECT_EQ(readFile("src/ne_postoji.cpp"), "");
 }
 
-
-TEST_F(TempProjectTest, WritingToFolderReportsFailure) {
+TEST_F(TempProjectTest, WritingToFolderReportsFailure)
+{
     // Путања је фолдер, па упис мора да пријави грешку
     EXPECT_FALSE(writeBytes(root_ / "src", "x"));
 }
 
 //---- Vracanje originala i provjera ----
 
-
-TEST_F(TempProjectTest, RestoreFileRestoresOriginalContent) {
+TEST_F(TempProjectTest, RestoreFileRestoresOriginalContent)
+{
     // Arrange
     writeFile("src/a.cpp", "int x = 2;\n");
 
@@ -763,12 +828,14 @@ TEST_F(TempProjectTest, RestoreFileRestoresOriginalContent) {
     EXPECT_EQ(readFile("src/a.cpp"), "int x = 1;\n");
 }
 
-TEST_F(TempProjectTest, RestoreFileReportsFailureWhenFileCannotBeWritten) {
+TEST_F(TempProjectTest, RestoreFileReportsFailureWhenFileCannotBeWritten)
+{
     // Путања је фолдер, па се враћање не може извршити
     EXPECT_FALSE(restoreFile(root_ / "src", "int x = 1;\n"));
 }
 
-TEST_F(TempProjectTest, ChangedFilesIsEmptyWhenNothingChanged) {
+TEST_F(TempProjectTest, ChangedFilesIsEmptyWhenNothingChanged)
+{
     // Arrange
     writeFile("src/a.cpp", "a");
     writeFile("src/b.cpp", "b");
@@ -778,15 +845,16 @@ TEST_F(TempProjectTest, ChangedFilesIsEmptyWhenNothingChanged) {
     EXPECT_TRUE(changedFiles(snapshot).empty());
 }
 
-TEST_F(TempProjectTest, ChangedFilesFindsOnlyModifiedAndMissingFiles) {
+TEST_F(TempProjectTest, ChangedFilesFindsOnlyModifiedAndMissingFiles)
+{
     // Arrange
     writeFile("src/a.cpp", "a");
     writeFile("src/b.cpp", "b");
     writeFile("src/c.cpp", "c");
     const auto snapshot = takeSnapshot(
         {root_ / "src/a.cpp", root_ / "src/b.cpp", root_ / "src/c.cpp"});
-    writeFile("src/b.cpp", "b mutiran");   // измијењен
-    fs::remove(root_ / "src/c.cpp");       // обрисан
+    writeFile("src/b.cpp", "b mutiran"); // измијењен
+    fs::remove(root_ / "src/c.cpp");     // обрисан
 
     // Act
     const auto changed = changedFiles(snapshot);
@@ -795,12 +863,13 @@ TEST_F(TempProjectTest, ChangedFilesFindsOnlyModifiedAndMissingFiles) {
     EXPECT_EQ(changed, (std::vector<fs::path>{root_ / "src/b.cpp", root_ / "src/c.cpp"}));
 }
 
-
 //----Generisanje mutanata iz fajlova----
 
-class GenerateMutantsTest : public TempProjectTest {
+class GenerateMutantsTest : public TempProjectTest
+{
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         TempProjectTest::SetUp();
         writeFile("src/A.cpp",
                   "/* blok komentar\n"
@@ -811,24 +880,27 @@ protected:
     }
 };
 
-TEST_F(GenerateMutantsTest, MutatesOnlyCodeOutsideComments) {
+TEST_F(GenerateMutantsTest, MutatesOnlyCodeOutsideComments)
+{
     // Act
     const auto mutants = generateMutants({root_ / "src" / "A.cpp"}, root_);
 
     // Assert
     ASSERT_FALSE(mutants.empty());
-    for (const auto& m : mutants) {
+    for (const auto &m : mutants)
+    {
         EXPECT_EQ(m.line, 5) << m.mutatedLine;
     }
 }
 
-TEST_F(GenerateMutantsTest, FillsMutantFields) {
+TEST_F(GenerateMutantsTest, FillsMutantFields)
+{
     // Act
     const auto mutants = generateMutants({root_ / "src" / "A.cpp"}, root_);
 
     // Assert
     ASSERT_FALSE(mutants.empty());
-    const Mutant& first = mutants.front();
+    const Mutant &first = mutants.front();
     EXPECT_EQ(first.id, 1);
     EXPECT_EQ(first.file, "src/A.cpp");
     EXPECT_EQ(first.original, "if (q <= 0) {");
@@ -837,7 +909,8 @@ TEST_F(GenerateMutantsTest, FillsMutantFields) {
     EXPECT_EQ(first.status, "непокренут");
 }
 
-TEST_F(GenerateMutantsTest, NumbersMutantsAcrossFiles) {
+TEST_F(GenerateMutantsTest, NumbersMutantsAcrossFiles)
+{
     // Arrange
     writeFile("src/B.cpp", "    count++;\n");
 
@@ -846,7 +919,8 @@ TEST_F(GenerateMutantsTest, NumbersMutantsAcrossFiles) {
         generateMutants({root_ / "src" / "A.cpp", root_ / "src" / "B.cpp"}, root_);
 
     // Assert
-    for (std::size_t i = 0; i < mutants.size(); ++i) {
+    for (std::size_t i = 0; i < mutants.size(); ++i)
+    {
         EXPECT_EQ(mutants[i].id, static_cast<int>(i) + 1);
     }
     EXPECT_EQ(mutants.back().file, "src/B.cpp");
@@ -854,9 +928,11 @@ TEST_F(GenerateMutantsTest, NumbersMutantsAcrossFiles) {
 
 //----Planirane mutacije----
 
-class LoadPlanTest : public TempProjectTest {
+class LoadPlanTest : public TempProjectTest
+{
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         TempProjectTest::SetUp();
         writeFile("src/Cart.cpp",
                   "/* quantity <= 0 u komentaru\n"
@@ -866,16 +942,19 @@ protected:
                   "    if (quantity <= 0) {\r\n"
                   "    it->quantity += quantity;\n"
                   "    a = 1;\n"
-                  "    b = 1;\n");
+                  "    b = 1;\n"
+                  "    e = 7; e = 7;\n");
     }
 
-    std::vector<Mutant> load(const std::string& plan) {
+    std::vector<Mutant> load(const std::string &plan)
+    {
         writeFile("plan.txt", plan);
         return loadPlan(root_ / "plan.txt", root_);
     }
 };
 
-TEST_F(LoadPlanTest, ReadsMutationFromPlan) {
+TEST_F(LoadPlanTest, ReadsMutationFromPlan)
+{
     // Act
     const auto mutants = load(
         "# komentar se preskace\n"
@@ -888,7 +967,7 @@ TEST_F(LoadPlanTest, ReadsMutationFromPlan) {
 
     // Assert
     ASSERT_EQ(mutants.size(), 1u);
-    const Mutant& m = mutants.front();
+    const Mutant &m = mutants.front();
     EXPECT_EQ(m.id, 1);
     EXPECT_EQ(m.op, "M01");
     EXPECT_EQ(m.description, "Kolicina 0 mora biti odbijena");
@@ -899,7 +978,8 @@ TEST_F(LoadPlanTest, ReadsMutationFromPlan) {
     EXPECT_EQ(m.expected, "killed");
 }
 
-TEST_F(LoadPlanTest, ExpectedDefaultsToKilled) {
+TEST_F(LoadPlanTest, ExpectedDefaultsToKilled)
+{
     // Act
     const auto mutants = load(
         "[M01] Bez expected\n"
@@ -913,7 +993,8 @@ TEST_F(LoadPlanTest, ExpectedDefaultsToKilled) {
     EXPECT_EQ(mutants.front().mutatedLine, "    it->quantity = quantity;");
 }
 
-TEST_F(LoadPlanTest, EmptyMutantDeletesCode) {
+TEST_F(LoadPlanTest, EmptyMutantDeletesCode)
+{
     // Act
     const auto mutants = load(
         "[M01] Brisanje\n"
@@ -928,7 +1009,8 @@ TEST_F(LoadPlanTest, EmptyMutantDeletesCode) {
     EXPECT_EQ(mutants.front().expected, "equivalent");
 }
 
-TEST_F(LoadPlanTest, ReadsSeveralMutations) {
+TEST_F(LoadPlanTest, ReadsSeveralMutations)
+{
     // Act
     const auto mutants = load(
         "[M01] Prva\nfile: src/Cart.cpp\noriginal: quantity <= 0\nmutant: quantity < 0\n"
@@ -940,7 +1022,8 @@ TEST_F(LoadPlanTest, ReadsSeveralMutations) {
     EXPECT_EQ(mutants[1].op, "M02");
 }
 
-TEST_F(LoadPlanTest, HeaderWithoutClosingBracketUsesWholeLineAsId) {
+TEST_F(LoadPlanTest, HeaderWithoutClosingBracketUsesWholeLineAsId)
+{
     // Act
     const auto mutants = load(
         "[M01 bez zagrade\nfile: src/Cart.cpp\noriginal: a = 1\nmutant: a = 2\n");
@@ -951,28 +1034,36 @@ TEST_F(LoadPlanTest, HeaderWithoutClosingBracketUsesWholeLineAsId) {
     EXPECT_EQ(mutants.front().description, "");
 }
 
-TEST_F(LoadPlanTest, EmptyPlanGivesNoMutations) {
+TEST_F(LoadPlanTest, EmptyPlanGivesNoMutations)
+{
     EXPECT_TRUE(load("# samo komentar\n").empty());
 }
 
-TEST_F(LoadPlanTest, ThrowsWhenPlanFileIsMissing) {
+TEST_F(LoadPlanTest, ThrowsWhenPlanFileIsMissing)
+{
     EXPECT_THROW(loadPlan(root_ / "ne_postoji.txt", root_), std::runtime_error);
 }
 
 // tuple<plan, dio poruke o gresci>
 class LoadPlanErrorTest
     : public LoadPlanTest,
-      public ::testing::WithParamInterface<std::tuple<std::string, std::string>> {};
+      public ::testing::WithParamInterface<std::tuple<std::string, std::string>>
+{
+};
 
-TEST_P(LoadPlanErrorTest, ReportsErrorInPlan) {
+TEST_P(LoadPlanErrorTest, ReportsErrorInPlan)
+{
     // Arrange
-    const auto& [plan, expectedMessage] = GetParam();
+    const auto &[plan, expectedMessage] = GetParam();
 
     // Act & Assert
-    try {
+    try
+    {
         load(plan);
         FAIL() << "ocekivan je izuzetak";
-    } catch (const std::runtime_error& e) {
+    }
+    catch (const std::runtime_error &e)
+    {
         EXPECT_NE(std::string(e.what()).find(expectedMessage), std::string::npos) << e.what();
     }
 }
@@ -983,6 +1074,8 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Values(
         std::make_tuple("[M01] x\noriginal: a = 1\n",
                         "[M01] недостаје file или original"),
+        std::make_tuple("[M01] x\nfile: src/Cart.cpp\noriginal: e = 7\n",
+                        "појављује 2 пута"),
         std::make_tuple("[M01] x\nfile: src/Cart.cpp\n",
                         "[M01] недостаје file или original"),
         std::make_tuple("[M01] x\nfile: src/Cart.cpp\noriginal: a = 1\nexpected: maybe\n",
@@ -996,17 +1089,19 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_tuple("file: src/Cart.cpp\n",
                         "Неисправна линија у плану: file: src/Cart.cpp"),
         std::make_tuple("[M01] x\nlinija bez dvotacke\n",
-                        "Неисправна линија у плану: linija bez dvotacke")
-    )
-);
+                        "Неисправна линија у плану: linija bez dvotacke")));
 
-TEST_F(LoadPlanTest, ReportsAllErrorsAtOnce) {
+TEST_F(LoadPlanTest, ReportsAllErrorsAtOnce)
+{
     // Act & Assert
-    try {
+    try
+    {
         load("[M01] x\nfile: src/Cart.cpp\n"
              "[M02] y\nfile: src/Nema.cpp\noriginal: a\n");
         FAIL() << "ocekivan je izuzetak";
-    } catch (const std::runtime_error& e) {
+    }
+    catch (const std::runtime_error &e)
+    {
         const std::string message = e.what();
         EXPECT_NE(message.find("[M01]"), std::string::npos);
         EXPECT_NE(message.find("[M02]"), std::string::npos);
@@ -1015,7 +1110,8 @@ TEST_F(LoadPlanTest, ReportsAllErrorsAtOnce) {
 
 //----Резервна копија----
 
-TEST_F(TempProjectTest, RecoverBackupRestoresFilesAfterInterruptedRun) {
+TEST_F(TempProjectTest, RecoverBackupRestoresFilesAfterInterruptedRun)
+{
     // Arrange: оригинал се сачува, па фајл остане мутиран (као да је рад прекинут)
     writeFile("src/a.cpp", "int x = 1;\n");
     writeFile("src/sub/b.cpp", "int y = 1;\n");
@@ -1035,11 +1131,13 @@ TEST_F(TempProjectTest, RecoverBackupRestoresFilesAfterInterruptedRun) {
     EXPECT_FALSE(fs::exists(backup));
 }
 
-TEST_F(TempProjectTest, RecoverBackupWithoutBackupDoesNothing) {
+TEST_F(TempProjectTest, RecoverBackupWithoutBackupDoesNothing)
+{
     EXPECT_EQ(recoverBackup(backupDirFor(root_ / "build"), root_), 0);
 }
 
-TEST_F(TempProjectTest, RemoveBackupDeletesBackupFolder) {
+TEST_F(TempProjectTest, RemoveBackupDeletesBackupFolder)
+{
     writeFile("src/a.cpp", "a");
     const fs::path backup = backupDirFor(root_ / "build");
     ASSERT_TRUE(saveBackup(backup, root_, takeSnapshot({root_ / "src/a.cpp"})));
