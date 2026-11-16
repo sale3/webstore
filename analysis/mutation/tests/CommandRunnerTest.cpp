@@ -13,6 +13,7 @@ using ::testing::HasSubstr;
 using ::testing::Not;
 using ::testing::Return;
 using ::testing::StrictMock;
+using ::testing::Throw;
 
 //----Komande preko mock-a----
 
@@ -268,4 +269,48 @@ TEST_F(TestMutantTest, InterruptedRunIsMarkedAsNotRun) {
     // Assert
     EXPECT_EQ(mutant_.status, "непокренут");
     EXPECT_EQ(readFile("src/Foo.cpp"), kOriginal);
+}
+
+//----Vracanje mutiranog fajla kad testovi ne uspiju----
+
+TEST_F(RunnerTest, TestMutantRestoresOriginalWhenRunnerThrows) {
+    // Arrange
+    //команда баци изузетак док је мутант уписан у фајл
+    const std::string original = "int a = 1;\n";
+    writeFile("src/Cart.cpp", original);
+    EXPECT_CALL(runner_, run(_, _)).WillOnce(Throw(std::runtime_error("komanda pala")));
+    Mutant m;
+    m.file = "src/Cart.cpp";
+    m.line = 1;
+    m.op = "AOR";
+    m.mutatedLine = "int a = 2;";
+
+    // Act & Assert
+    EXPECT_THROW(testMutant(m, root_, buildDir_, runner_), std::runtime_error);
+    EXPECT_EQ(readFile("src/Cart.cpp"), original);
+}
+
+TEST_F(RunnerTest, TestMutantThrowsWhenMutantCannotBeWritten) {
+    // Arrange: 
+    // фајл се не може уписати јер је само за читање
+    // кад се покрене као рут, упис је дозвољен ша тест нема смисла - прескаче се 
+    const std::string original = "int a = 1;\n";
+    writeFile("src/Cart.cpp", original);
+    const fs::path file = root_ / "src/Cart.cpp";
+    fs::permissions(file, fs::perms::owner_write, fs::perm_options::remove);
+    if (writeBytes(file, "probe")) {
+        fs::permissions(file, fs::perms::owner_write, fs::perm_options::add);
+        writeBytes(file, original);
+        GTEST_SKIP() << "upis je dozvoljen i za fajl samo za citanje (vjerovatno root)";
+    }
+    Mutant m;
+    m.file = "src/Cart.cpp";
+    m.line = 1;
+    m.op = "AOR";
+    m.mutatedLine = "int a = 2;";
+
+    // Act & Assert: alat ne smije nastaviti bez upisanog mutanta
+    EXPECT_THROW(testMutant(m, root_, buildDir_, runner_), std::runtime_error);
+
+    fs::permissions(file, fs::perms::owner_write, fs::perm_options::add);
 }
