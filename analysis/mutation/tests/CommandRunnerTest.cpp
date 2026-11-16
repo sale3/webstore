@@ -14,6 +14,8 @@ using ::testing::Not;
 using ::testing::Return;
 using ::testing::StrictMock;
 using ::testing::Throw;
+using ::testing::Invoke;
+
 
 //----Komande preko mock-a----
 
@@ -313,4 +315,28 @@ TEST_F(RunnerTest, TestMutantThrowsWhenMutantCannotBeWritten) {
     EXPECT_THROW(testMutant(m, root_, buildDir_, runner_), std::runtime_error);
 
     fs::permissions(file, fs::perms::owner_write, fs::perm_options::add);
+}
+
+TEST_F(RunnerTest, TestMutantThrowsWhenOriginalCannotBeRestored) {
+    // Arrange
+    // док команда ради, мутирани фајл се замјени фолдером, па враћање ориг8инала не може проћи
+    writeFile("src/Cart.cpp", "int a = 1;\n");
+    const fs::path file = root_ / "src/Cart.cpp";
+    Mutant m;
+    m.file = "src/Cart.cpp";
+    m.line = 1;
+    m.op = "AOR";
+    m.mutatedLine = "int a = 2;";
+    bool replaced = false;
+    EXPECT_CALL(runner_, run(_, _)).WillRepeatedly(Invoke([&](const std::string&, const fs::path&) {
+        if (!replaced) {
+            replaced = true;
+            fs::remove(file);
+            fs::create_directory(file);
+        }
+        return 0;
+    }));
+
+    // Act & Assert
+    EXPECT_THROW(testMutant(m, root_, buildDir_, runner_), std::runtime_error);
 }
