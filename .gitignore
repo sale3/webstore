@@ -10,3 +10,4 @@ cmake-build-*/
 *.gcov
 coverage/
 analysis/report.md
+analysis/complexity_report.md
