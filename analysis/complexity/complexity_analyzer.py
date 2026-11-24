@@ -10,7 +10,7 @@
 Za faktore branches, side_effects, error_handling i exceptions uracunavaju se i metode iste klase koje funkcija poziva
 (npr. applyDiscount poziva calculateDiscountPercentage) jer i one moraju proci kroz test.
 
-Svaki izbrojani faktor se preslikava u nivo 0-3 (ma tabela THRESHOLDS), zbir nivoa je broj bodova,
+Svaki izbrojani faktor se preslikava u nivo 0-3 (ima tabela THRESHOLDS), zbir nivoa je broj bodova,
  a bodovi se preslikavaju u ocjenu od 1 do 5.
 
 """
@@ -102,6 +102,7 @@ class Function:
     parameters: int
     body: str
     is_constructor: bool = False
+    initializers: str = "" 
 
 
 @dataclass
@@ -254,6 +255,7 @@ def parse_source(code: str) -> list[Function]:
                 parameters=count_parameters(code[open_paren + 1 : close_paren]),
                 body=code[body_start + 1 : body_end],
                 is_constructor=class_name == name,
+                initializers=code[close_paren + 1 : body_start] if class_name == name else "",
             ))
         position = body_end + 1
     return functions
@@ -357,7 +359,8 @@ class Analyzer:
         bodies = self.reachable_bodies(function, class_info)
         body = "\n".join(bodies)
 
-        used = {name for name in dependencies if re.search(rf"\b{re.escape(name)}\b", body)}
+        dependency_text = body + "\n" + function.initializers
+        used = {name for name in dependencies if re.search(rf"\b{re.escape(name)}\b", dependency_text)}       
         mutating_calls = set()
         for name in used:
             target = self.classes[dependencies[name].base_type]
@@ -490,6 +493,10 @@ def create_report(results: list[Result], manual: dict[tuple[str, str], int]) -> 
         "",
         "Гранања, споредни ефекти, обрада грешака и изузеци укључују и методе исте класе",
         "које функција позива, јер и њих тест мора проћи.",
+        "",
+        "Конструктори: зависности се броје и из иницијализационе листе (нпр. `repo_(repo)`),",
+        "а споредни ефекти се за конструкторе не рачунају, јер конструктор иницијализује",
+        "чланове, а не мијења их.",
         "",
         "Оцјена је оријентациона и мора бити образложена анализом кода и тестова.",
     ]
