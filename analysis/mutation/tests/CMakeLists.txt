@@ -6,6 +6,7 @@ include(GoogleTest)
 add_executable(mutation_core_tests
     MutationCoreTest.cpp
     CommandRunnerTest.cpp
+    MutationBackupTest.cpp
 )
 
 target_include_directories(mutation_core_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

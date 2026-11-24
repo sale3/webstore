@@ -1022,16 +1022,17 @@ TEST_F(LoadPlanTest, ReadsSeveralMutations)
     EXPECT_EQ(mutants[1].op, "M02");
 }
 
-TEST_F(LoadPlanTest, HeaderWithoutClosingBracketUsesWholeLineAsId)
-{
-    // Act
-    const auto mutants = load(
-        "[M01 bez zagrade\nfile: src/Cart.cpp\noriginal: a = 1\nmutant: a = 2\n");
-
-    // Assert
-    ASSERT_EQ(mutants.size(), 1u);
-    EXPECT_EQ(mutants.front().op, "[M01 bez zagrade");
-    EXPECT_EQ(mutants.front().description, "");
+TEST_F(LoadPlanTest, HeaderWithoutClosingBracketIsReported) {
+    // Act & Assert
+    try {
+        load("[M01 bez zagrade\nfile: src/Cart.cpp\noriginal: a = 1\nmutant: a = 2\n");
+        FAIL() << "ocekivan je izuzetak";
+    } catch (const std::runtime_error& e) {
+        const std::string message = e.what();
+        EXPECT_NE(message.find("нема затворену заграду"), std::string::npos) << message;
+        // polja ispod neispravnog zaglavlja se preskacu, pa nema dodatnih gresaka
+        EXPECT_EQ(message.find("Неисправна линија"), std::string::npos) << message;
+    }
 }
 
 TEST_F(LoadPlanTest, EmptyPlanGivesNoMutations)
